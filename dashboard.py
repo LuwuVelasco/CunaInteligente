@@ -82,13 +82,26 @@ def update_dash_graphs(n):
 def run_dash():
     app.run_server(debug=True, use_reloader=False)
 
+# Datos de peso y talla por edad y género
+pesos_tallas_ninos = {
+    0: (2.9, 3.3), 1: (3.7, 4.2), 2: (4.3, 5.0), 3: (5.0, 5.7),
+    4: (6.3, 6.3), 5: (6.9, 6.9), 6: (7.5, 7.5), 7: (8.0, 8.0),
+    9: (8.9, 8.9), 10: (9.3, 9.3), 11: (9.6, 9.6), 12: (10.0, 10.0)
+}
+
+pesos_tallas_ninas = {
+    0: (2.5, 3.2), 1: (3.2, 4.0), 2: (4.0, 4.7), 3: (4.7, 5.5),
+    4: (6.1, 6.1), 5: (6.7, 6.7), 6: (7.3, 7.3), 7: (7.8, 7.8),
+    8: (8.2, 8.2), 9: (8.6, 8.6), 10: (9.1, 9.1), 11: (9.5, 9.5), 12: (9.8, 9.8)
+}
+
 # Configuración de gráficos en Tkinter usando Matplotlib
 def update_tkinter_charts():
     baby_data = get_baby_data()
     fig_weight.clear()
     fig_last_meal.clear()
 
-    # Opción 1: Contador de Tiempo Transcurrido desde la Última Comida
+    # Contador de Tiempo Transcurrido desde la Última Comida
     text_widget.delete("1.0", tk.END)
     for _, row in baby_data.iterrows():
         name = row['nombre']
@@ -98,26 +111,28 @@ def update_tkinter_charts():
         minutes = remainder // 60
         text_widget.insert(tk.END, f"{name}: {int(hours)} horas, {int(minutes)} minutos\n")
 
-    # Opción 2: Gráfico de Barras Horizontales para el Tiempo Transcurrido desde la Última Comida
-    ax1 = fig_last_meal.add_subplot(111)
-    times = [(datetime.now() - pd.to_datetime(row['HoraUltimaComida'])).total_seconds() / 3600 for _, row in baby_data.iterrows()]
-    names = baby_data['nombre']
-    ax1.barh(names, times, color='lightblue')
-    ax1.set_title("Horas desde la última comida")
-    ax1.set_xlabel("Horas")
-    canvas_last_meal.draw()
-
-    # Gráfico de comparación de peso
+    # Gráfico de comparación de peso con rangos por género
     ax2 = fig_weight.add_subplot(111)
-    ages = [(datetime.now() - pd.to_datetime(row['fechaDeNacimiento'])).days / 30.44 for _, row in baby_data.iterrows()]
-    actual_weights = baby_data['peso']
-    expected_weights = [3 + 0.7 * age for age in ages]  # Peso estimado
-    ax2.plot(ages, actual_weights, 'o-', label='Peso Real')
-    ax2.plot(ages, expected_weights, 'x--', label='Peso Esperado')
-    ax2.set_title("Comparación de Peso")
+    for _, row in baby_data.iterrows():
+        age_months = (datetime.now() - pd.to_datetime(row['fechaDeNacimiento'])).days // 30
+        actual_weight = row['peso']
+        gender = row['genero']
+        
+        # Obtener el rango de peso adecuado según el género
+        if gender.lower() == 'niño':
+            weight_range = pesos_tallas_ninos.get(age_months, (None, None))
+        else:
+            weight_range = pesos_tallas_ninas.get(age_months, (None, None))
+        
+        if weight_range[0] is not None:
+            ax2.plot([age_months], [actual_weight], 'o', label=f'{row["nombre"]} (Actual)')
+            ax2.plot([age_months], [weight_range[0]], 's', color='green', label=f'{row["nombre"]} (Peso Mínimo)')
+            ax2.plot([age_months], [weight_range[1]], 's', color='red', label=f'{row["nombre"]} (Peso Máximo)')
+
+    ax2.set_title("Comparación de Peso con Rango Adecuado")
     ax2.set_xlabel("Edad (meses)")
     ax2.set_ylabel("Peso (kg)")
-    ax2.legend()
+    ax2.legend(loc="upper left")
     canvas_weight.draw()
 
     # Refrescar cada 5 segundos
