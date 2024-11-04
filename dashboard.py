@@ -22,24 +22,39 @@ def connect_db():
 # Consultas a la base de datos
 def get_baby_data():
     conn = connect_db()
-    query = "SELECT nombre, fechaDeNacimiento, peso, HoraUltimaComida FROM bebe"
+    query = "SELECT id_bebe, nombre, fechaDeNacimiento, pesoInicial FROM bebe"
     df = pd.read_sql(query, conn)
     conn.close()
     return df
 
-def get_humidity_data():
+def get_characteristics_data():
     conn = connect_db()
-    query = "SELECT fecha, tiempoHumedad FROM registroHumedad"
+    query = "SELECT fecha, peso, altura, bebe_id_bebe FROM registroCaracteristicas"
     df = pd.read_sql(query, conn)
     conn.close()
     return df
 
-def get_crying_data():
-    conn = connect_db()
-    query = "SELECT fecha, tiempoLLanto FROM registroLLanto"
-    df = pd.read_sql(query, conn)
-    conn.close()
-    return df
+# Función para obtener el peso de referencia de acuerdo con la edad
+def get_reference_weight(age, is_boy=True):
+    if is_boy:
+        weight_reference = {0: (2.9, 3.3), 1: (3.7, 4.2), 2: (4.3, 5.0), 3: (5.0, 5.7),
+                            4: (6.3, 6.3), 5: (6.9, 6.9), 6: (7.5, 7.5), 7: (8.0, 8.0),
+                            9: (8.9, 8.9), 10: (9.3, 9.3), 11: (9.6, 9.6), 12: (10.0, 10.0)}
+    else:
+        weight_reference = {0: (2.5, 3.2), 1: (3.2, 4.0), 2: (4.0, 4.7), 3: (4.7, 5.5),
+                            4: (6.1, 6.1), 5: (6.7, 6.7), 6: (7.3, 7.3), 7: (7.8, 7.8),
+                            8: (8.2, 8.2), 9: (8.6, 8.6), 10: (9.1, 9.1), 11: (9.5, 9.5), 12: (9.8, 9.8)}
+    return weight_reference.get(age, (0, 0))
+
+# Función para obtener la altura de referencia de acuerdo con la edad
+def get_reference_height(age, is_boy=True):
+    if is_boy:
+        height_reference = {0: 50, 1: 55, 2: 57, 3: 61, 4: 62, 5: 63, 
+                            6: 64, 7: 66, 9: 69, 10: 71, 11: 73, 12: 75}
+    else:
+        height_reference = {0: 48, 1: 52, 2: 56, 3: 59, 4: 61, 5: 62, 
+                            6: 63, 7: 65, 8: 67, 9: 68, 10: 70, 11: 72, 12: 73}
+    return height_reference.get(age, 0)
 
 # Configuración de Dash
 app = Dash(__name__)
@@ -48,92 +63,86 @@ app.layout = html.Div([
     html.H1("Dashboard Interactivo de Cuna Inteligente"),
     dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0),
 
-    # Gráfico de Humedad
-    dcc.Graph(id='humidity-graph'),
-
-    # Gráfico de Llanto
-    dcc.Graph(id='crying-graph')
+    # Gráfico de Peso
+    dcc.Graph(id='weight-graph'),
+    # Gráfico de Altura
+    dcc.Graph(id='height-graph'),
 ])
 
 # Callbacks de Dash para actualizar gráficos en tiempo real
 @app.callback(
-    [Output('humidity-graph', 'figure'), Output('crying-graph', 'figure')],
-    [Input('interval-component', 'n_intervals')]
+    [Output('weight-graph', 'figure'), Output('height-graph', 'figure')],
+    Input('interval-component', 'n_intervals')
 )
-def update_dash_graphs(n):
-    humidity_data = get_humidity_data()
-    crying_data = get_crying_data()
+def update_dash_graph(n):
+    baby_data = get_baby_data()
+    characteristics_data = get_characteristics_data()
 
-    # Configuración del gráfico de Humedad
-    fig_humidity = go.Figure(
-        data=[go.Scatter(x=humidity_data['fecha'], y=humidity_data['tiempoHumedad'], mode='lines+markers')],
-        layout=go.Layout(title="Tiempo de Humedad", xaxis={'title': 'Fecha'}, yaxis={'title': 'Tiempo de Humedad'})
-    )
+    # Calcular la edad en meses
+    baby_data['edadMeses'] = baby_data['fechaDeNacimiento'].apply(lambda x: (datetime.now() - pd.to_datetime(x)).days // 30)
+    characteristics_data = characteristics_data.merge(baby_data[['id_bebe', 'edadMeses']], left_on='bebe_id_bebe', right_on='id_bebe', how='left')
+    
+    # Gráfico de peso
+    weights = characteristics_data['peso']
+    ages = characteristics_data['edadMeses']
+    expected_weights = [get_reference_weight(age, True)[1] for age in ages]
+    
+    fig_weight = go.Figure()
+    fig_weight.add_trace(go.Scatter(x=ages, y=weights, mode='lines+markers', name='Peso Actual'))
+    fig_weight.add_trace(go.Scatter(x=ages, y=expected_weights, mode='lines+markers', name='Peso Esperado'))
+    fig_weight.update_layout(title="Comparación de Peso Actual vs Esperado", xaxis_title="Edad (meses)", yaxis_title="Peso (kg)")
 
-    # Configuración del gráfico de Llanto
-    fig_crying = go.Figure(
-        data=[go.Scatter(x=crying_data['fecha'], y=crying_data['tiempoLLanto'], mode='lines+markers')],
-        layout=go.Layout(title="Tiempo de Llanto", xaxis={'title': 'Fecha'}, yaxis={'title': 'Tiempo de Llanto'})
-    )
+    # Gráfico de altura
+    heights = characteristics_data['altura']
+    expected_heights = [get_reference_height(age, True) for age in ages]
 
-    return fig_humidity, fig_crying
+    fig_height = go.Figure()
+    fig_height.add_trace(go.Scatter(x=ages, y=heights, mode='lines+markers', name='Altura Actual'))
+    fig_height.add_trace(go.Scatter(x=ages, y=expected_heights, mode='lines+markers', name='Altura Esperada'))
+    fig_height.update_layout(title="Comparación de Altura Actual vs Esperada", xaxis_title="Edad (meses)", yaxis_title="Altura (cm)")
+
+    return fig_weight, fig_height
 
 # Hilo para ejecutar Dash
 def run_dash():
     app.run_server(debug=True, use_reloader=False)
 
-# Datos de peso y talla por edad y género
-pesos_tallas_ninos = {
-    0: (2.9, 3.3), 1: (3.7, 4.2), 2: (4.3, 5.0), 3: (5.0, 5.7),
-    4: (6.3, 6.3), 5: (6.9, 6.9), 6: (7.5, 7.5), 7: (8.0, 8.0),
-    9: (8.9, 8.9), 10: (9.3, 9.3), 11: (9.6, 9.6), 12: (10.0, 10.0)
-}
-
-pesos_tallas_ninas = {
-    0: (2.5, 3.2), 1: (3.2, 4.0), 2: (4.0, 4.7), 3: (4.7, 5.5),
-    4: (6.1, 6.1), 5: (6.7, 6.7), 6: (7.3, 7.3), 7: (7.8, 7.8),
-    8: (8.2, 8.2), 9: (8.6, 8.6), 10: (9.1, 9.1), 11: (9.5, 9.5), 12: (9.8, 9.8)
-}
-
 # Configuración de gráficos en Tkinter usando Matplotlib
 def update_tkinter_charts():
     baby_data = get_baby_data()
+    characteristics_data = get_characteristics_data()
+    
     fig_weight.clear()
-    fig_last_meal.clear()
+    fig_height.clear()
 
-    # Contador de Tiempo Transcurrido desde la Última Comida
-    text_widget.delete("1.0", tk.END)
-    for _, row in baby_data.iterrows():
-        name = row['nombre']
-        last_meal_time = pd.to_datetime(row['HoraUltimaComida'])
-        time_since_last_meal = datetime.now() - last_meal_time
-        hours, remainder = divmod(time_since_last_meal.total_seconds(), 3600)
-        minutes = remainder // 60
-        text_widget.insert(tk.END, f"{name}: {int(hours)} horas, {int(minutes)} minutos\n")
+    # Gráfico de comparación de peso en Tkinter
+    ax1 = fig_weight.add_subplot(111)
+    characteristics_data = characteristics_data.merge(baby_data[['id_bebe', 'nombre']], left_on='bebe_id_bebe', right_on='id_bebe', how='left')
+    ages = characteristics_data['edadMeses']
+    weights = characteristics_data['peso']
+    expected_weights = [get_reference_weight(age, True)[1] for age in ages]
+    
+    ax1.plot(ages, weights, 'o-', label='Peso Real')
+    ax1.plot(ages, expected_weights, 'x--', label='Peso Esperado')
+    ax1.set_title("Comparación de Peso en Tkinter")
+    ax1.set_xlabel("Edad (meses)")
+    ax1.set_ylabel("Peso (kg)")
+    ax1.legend()
 
-    # Gráfico de comparación de peso con rangos por género
-    ax2 = fig_weight.add_subplot(111)
-    for _, row in baby_data.iterrows():
-        age_months = (datetime.now() - pd.to_datetime(row['fechaDeNacimiento'])).days // 30
-        actual_weight = row['peso']
-        gender = row['genero']
-        
-        # Obtener el rango de peso adecuado según el género
-        if gender.lower() == 'niño':
-            weight_range = pesos_tallas_ninos.get(age_months, (None, None))
-        else:
-            weight_range = pesos_tallas_ninas.get(age_months, (None, None))
-        
-        if weight_range[0] is not None:
-            ax2.plot([age_months], [actual_weight], 'o', label=f'{row["nombre"]} (Actual)')
-            ax2.plot([age_months], [weight_range[0]], 's', color='green', label=f'{row["nombre"]} (Peso Mínimo)')
-            ax2.plot([age_months], [weight_range[1]], 's', color='red', label=f'{row["nombre"]} (Peso Máximo)')
-
-    ax2.set_title("Comparación de Peso con Rango Adecuado")
+    # Gráfico de comparación de altura en Tkinter
+    ax2 = fig_height.add_subplot(111)
+    heights = characteristics_data['altura']
+    expected_heights = [get_reference_height(age, True) for age in ages]
+    
+    ax2.plot(ages, heights, 'o-', label='Altura Real')
+    ax2.plot(ages, expected_heights, 'x--', label='Altura Esperada')
+    ax2.set_title("Comparación de Altura en Tkinter")
     ax2.set_xlabel("Edad (meses)")
-    ax2.set_ylabel("Peso (kg)")
-    ax2.legend(loc="upper left")
+    ax2.set_ylabel("Altura (cm)")
+    ax2.legend()
+    
     canvas_weight.draw()
+    canvas_height.draw()
 
     # Refrescar cada 5 segundos
     root.after(5000, update_tkinter_charts)
@@ -148,19 +157,14 @@ def open_dashboard():
 
 tk.Button(root, text="Abrir Dashboard Interactivo", command=open_dashboard).pack()
 
-# Opción 1: Contador de Tiempo Transcurrido en Tkinter
-text_widget = tk.Text(root, height=10, width=40)
-text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-# Gráfico en Tkinter de tiempo desde la última comida (Opción 2)
-fig_last_meal = plt.Figure(figsize=(5, 4), dpi=100)
-canvas_last_meal = FigureCanvasTkAgg(fig_last_meal, master=root)
-canvas_last_meal.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-# Gráfico en Tkinter de comparación de peso
+# Gráficos en Tkinter
 fig_weight = plt.Figure(figsize=(5, 4), dpi=100)
 canvas_weight = FigureCanvasTkAgg(fig_weight, master=root)
 canvas_weight.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+fig_height = plt.Figure(figsize=(5, 4), dpi=100)
+canvas_height = FigureCanvasTkAgg(fig_height, master=root)
+canvas_height.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
 # Iniciar el dashboard de Dash en un hilo separado
 threading.Thread(target=run_dash).start()
