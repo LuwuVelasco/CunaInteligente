@@ -1,15 +1,14 @@
 -- Created by Vertabelo (http://vertabelo.com)
--- Last modification date: 2024-11-04 17:38:01.725
+-- Last modification date: 2024-11-04 20:15:57.03
 
 -- tables
--- Table: cuna
-CREATE TABLE cuna (
-    id_cuna int  NOT NULL,
+-- Table: bebe
+CREATE TABLE bebe (
+    id_bebe int  NOT NULL,
     nombreBebe varchar(255)  NOT NULL,
     fechaDeNacimiento datetime  NOT NULL,
-    modelo varchar(255)  NOT NULL,
     usuario_id_usuario int  NOT NULL,
-    CONSTRAINT cuna_pk PRIMARY KEY (id_cuna)
+    CONSTRAINT cuna_pk PRIMARY KEY (id_bebe)
 );
 
 -- Table: datosMesBebe
@@ -71,26 +70,26 @@ CREATE TABLE usuario (
 -- foreign keys
 -- Reference: bebe_cuna (table: datosMesBebe)
 ALTER TABLE datosMesBebe ADD CONSTRAINT bebe_cuna FOREIGN KEY bebe_cuna (cuna_id_cuna)
-    REFERENCES cuna (id_cuna);
+    REFERENCES bebe (id_bebe);
 
 -- Reference: registroAlimentacion_cuna (table: registroAlimentacion)
 ALTER TABLE registroAlimentacion ADD CONSTRAINT registroAlimentacion_cuna FOREIGN KEY registroAlimentacion_cuna (cuna_id_cuna)
-    REFERENCES cuna (id_cuna);
+    REFERENCES bebe (id_bebe);
 
 -- Reference: registroCuna_bebe (table: registroTemperatura)
 ALTER TABLE registroTemperatura ADD CONSTRAINT registroCuna_bebe FOREIGN KEY registroCuna_bebe (cuna_id_cuna)
-    REFERENCES cuna (id_cuna);
+    REFERENCES bebe (id_bebe);
 
 -- Reference: registroHumedad_cuna (table: registroHumedad)
 ALTER TABLE registroHumedad ADD CONSTRAINT registroHumedad_cuna FOREIGN KEY registroHumedad_cuna (cuna_id_cuna)
-    REFERENCES cuna (id_cuna);
+    REFERENCES bebe (id_bebe);
 
 -- Reference: registroLlanto_cuna (table: registroLlanto)
 ALTER TABLE registroLlanto ADD CONSTRAINT registroLlanto_cuna FOREIGN KEY registroLlanto_cuna (cuna_id_cuna)
-    REFERENCES cuna (id_cuna);
+    REFERENCES bebe (id_bebe);
 
--- Reference: registros_usuario (table: cuna)
-ALTER TABLE cuna ADD CONSTRAINT registros_usuario FOREIGN KEY registros_usuario (usuario_id_usuario)
+-- Reference: registros_usuario (table: bebe)
+ALTER TABLE bebe ADD CONSTRAINT registros_usuario FOREIGN KEY registros_usuario (usuario_id_usuario)
     REFERENCES usuario (id_usuario);
 
 -- End of file.
