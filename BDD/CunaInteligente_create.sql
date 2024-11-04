@@ -1,11 +1,13 @@
 -- Created by Vertabelo (http://vertabelo.com)
--- Last modification date: 2024-11-04 20:15:57.03
+-- Last modification date: 2024-11-04 20:40:53.978
 
 -- tables
 -- Table: bebe
 CREATE TABLE bebe (
     id_bebe int  NOT NULL,
-    nombreBebe varchar(255)  NOT NULL,
+    nombre varchar(255)  NOT NULL,
+    apellidoPaterno varchar(255)  NOT NULL,
+    apellidoMaterno varchar(255)  NOT NULL,
     fechaDeNacimiento datetime  NOT NULL,
     usuario_id_usuario int  NOT NULL,
     CONSTRAINT cuna_pk PRIMARY KEY (id_bebe)
@@ -61,7 +63,10 @@ CREATE TABLE registroTemperatura (
 -- Table: usuario
 CREATE TABLE usuario (
     id_usuario int  NOT NULL,
-    usuario varchar(255)  NOT NULL,
+    username varchar(255)  NOT NULL,
+    nombre varchar(255)  NOT NULL,
+    apellidoPaterno varchar(255)  NOT NULL,
+    apellidoMaterno varchar(255)  NOT NULL,
     gmail varchar(255)  NOT NULL,
     contrasenia varchar(255)  NOT NULL,
     CONSTRAINT usuario_pk PRIMARY KEY (id_usuario)
@@ -93,3 +98,4 @@ ALTER TABLE bebe ADD CONSTRAINT registros_usuario FOREIGN KEY registros_usuario 
     REFERENCES usuario (id_usuario);
 
 -- End of file.
+
