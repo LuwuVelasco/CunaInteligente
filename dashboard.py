@@ -1,14 +1,13 @@
 import mysql.connector
 import pandas as pd
+import tkinter as tk
+from tkinter import messagebox
+from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import tkinter as tk
-from datetime import datetime
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
-import plotly.graph_objs as go
 import threading
-import webbrowser
 
 # Conexión a la base de datos
 def connect_db():
@@ -19,156 +18,198 @@ def connect_db():
         database="cunainteligente"
     )
 
-# Consultas a la base de datos
-def get_baby_data():
+# Función de inicio de sesión
+def login(username, password):
     conn = connect_db()
-    query = "SELECT id_bebe, nombre, fechaDeNacimiento, pesoInicial FROM bebe"
-    df = pd.read_sql(query, conn)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM usuario WHERE usuario=%s AND contrasenia=%s", (username, password))
+    result = cursor.fetchone()
     conn.close()
-    return df
+    return result
 
-def get_characteristics_data():
+# Función de registro de usuario
+def register_user(username, password):
     conn = connect_db()
-    query = "SELECT fecha, peso, altura, bebe_id_bebe FROM registroCaracteristicas"
-    df = pd.read_sql(query, conn)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO usuario (usuario, contrasenia) VALUES (%s, %s)", (username, password))
+        conn.commit()
+        messagebox.showinfo("Registro exitoso", "Usuario registrado correctamente")
+    except mysql.connector.Error as err:
+        messagebox.showerror("Error", f"Error al registrar usuario: {err}")
     conn.close()
-    return df
 
-# Función para obtener el peso de referencia de acuerdo con la edad
-def get_reference_weight(age, is_boy=True):
-    if is_boy:
-        weight_reference = {0: (2.9, 3.3), 1: (3.7, 4.2), 2: (4.3, 5.0), 3: (5.0, 5.7),
-                            4: (6.3, 6.3), 5: (6.9, 6.9), 6: (7.5, 7.5), 7: (8.0, 8.0),
-                            9: (8.9, 8.9), 10: (9.3, 9.3), 11: (9.6, 9.6), 12: (10.0, 10.0)}
-    else:
-        weight_reference = {0: (2.5, 3.2), 1: (3.2, 4.0), 2: (4.0, 4.7), 3: (4.7, 5.5),
-                            4: (6.1, 6.1), 5: (6.7, 6.7), 6: (7.3, 7.3), 7: (7.8, 7.8),
-                            8: (8.2, 8.2), 9: (8.6, 8.6), 10: (9.1, 9.1), 11: (9.5, 9.5), 12: (9.8, 9.8)}
-    return weight_reference.get(age, (0, 0))
+# Función para seleccionar bebé
+def get_babies_for_user():
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id_bebe, nombre FROM bebe")
+    data = cursor.fetchall()
+    conn.close()
+    return data
 
-# Función para obtener la altura de referencia de acuerdo con la edad
-def get_reference_height(age, is_boy=True):
-    if is_boy:
-        height_reference = {0: 50, 1: 55, 2: 57, 3: 61, 4: 62, 5: 63, 
-                            6: 64, 7: 66, 9: 69, 10: 71, 11: 73, 12: 75}
-    else:
-        height_reference = {0: 48, 1: 52, 2: 56, 3: 59, 4: 61, 5: 62, 
-                            6: 63, 7: 65, 8: 67, 9: 68, 10: 70, 11: 72, 12: 73}
-    return height_reference.get(age, 0)
+# Función para registrar un bebé
+def register_baby(name, birth_date):
+    conn = connect_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO bebe (nombre, fechaDeNacimiento) VALUES (%s, %s)", (name, birth_date))
+        conn.commit()
+        messagebox.showinfo("Registro exitoso", f"Bebé {name} registrado correctamente")
+    except mysql.connector.Error as err:
+        messagebox.showerror("Error", f"Error al registrar bebé: {err}")
+    conn.close()
 
-# Configuración de Dash
-app = Dash(__name__)
+# Función para iniciar el dashboard de Dash
+def start_dash_server():
+    app = Dash(__name__)
 
-app.layout = html.Div([
-    html.H1("Dashboard Interactivo de Cuna Inteligente"),
-    dcc.Interval(id='interval-component', interval=5*1000, n_intervals=0),
+    app.layout = html.Div([
+        html.H1("Gráfica en Tiempo Real"),
+        dcc.Graph(id='live-graph'),
+        dcc.Interval(id='interval-component', interval=1000, n_intervals=0)
+    ])
 
-    # Gráfico de Peso
-    dcc.Graph(id='weight-graph'),
-    # Gráfico de Altura
-    dcc.Graph(id='height-graph'),
-])
+    @app.callback(Output('live-graph', 'figure'), [Input('interval-component', 'n_intervals')])
+    def update_graph(n):
+        engine = connect_db()
+        query = "SELECT timestamp, metric FROM registroCaracteristicas ORDER BY timestamp DESC LIMIT 10"
+        data = pd.read_sql(query, engine)
 
-# Callbacks de Dash para actualizar gráficos en tiempo real
-@app.callback(
-    [Output('weight-graph', 'figure'), Output('height-graph', 'figure')],
-    Input('interval-component', 'n_intervals')
-)
-def update_dash_graph(n):
-    baby_data = get_baby_data()
-    characteristics_data = get_characteristics_data()
+        # Configuración del gráfico de Dash
+        fig = {
+            'data': [{'x': data['timestamp'], 'y': data['metric'], 'type': 'line', 'name': 'Metric'}],
+            'layout': {'title': 'Metric en Tiempo Real'}
+        }
+        return fig
 
-    # Calcular la edad en meses
-    baby_data['edadMeses'] = baby_data['fechaDeNacimiento'].apply(lambda x: (datetime.now() - pd.to_datetime(x)).days // 30)
-    characteristics_data = characteristics_data.merge(baby_data[['id_bebe', 'edadMeses']], left_on='bebe_id_bebe', right_on='id_bebe', how='left')
-    
-    # Gráfico de peso
-    weights = characteristics_data['peso']
-    ages = characteristics_data['edadMeses']
-    expected_weights = [get_reference_weight(age, True)[1] for age in ages]
-    
-    fig_weight = go.Figure()
-    fig_weight.add_trace(go.Scatter(x=ages, y=weights, mode='lines+markers', name='Peso Actual'))
-    fig_weight.add_trace(go.Scatter(x=ages, y=expected_weights, mode='lines+markers', name='Peso Esperado'))
-    fig_weight.update_layout(title="Comparación de Peso Actual vs Esperado", xaxis_title="Edad (meses)", yaxis_title="Peso (kg)")
+    app.run_server(debug=False)
 
-    # Gráfico de altura
-    heights = characteristics_data['altura']
-    expected_heights = [get_reference_height(age, True) for age in ages]
+# Función para mostrar el dashboard de Tkinter
+def show_dashboard(baby_id):
+    dashboard_window = tk.Toplevel()
+    dashboard_window.title("Dashboard del Bebé")
 
-    fig_height = go.Figure()
-    fig_height.add_trace(go.Scatter(x=ages, y=heights, mode='lines+markers', name='Altura Actual'))
-    fig_height.add_trace(go.Scatter(x=ages, y=expected_heights, mode='lines+markers', name='Altura Esperada'))
-    fig_height.update_layout(title="Comparación de Altura Actual vs Esperada", xaxis_title="Edad (meses)", yaxis_title="Altura (cm)")
+    # Obtener datos del bebé
+    engine = connect_db()
+    query = f"SELECT * FROM registroCaracteristicas WHERE bebe_id_bebe={baby_id}"
+    baby_data = pd.read_sql(query, engine)
 
-    return fig_weight, fig_height
+    # Verificar que las columnas existen antes de graficar
+    if 'timestamp' not in baby_data.columns or 'metric' not in baby_data.columns:
+        messagebox.showerror("Error", "La columna 'timestamp' o 'metric' no existe en los datos.")
+        dashboard_window.destroy()
+        return
 
-# Hilo para ejecutar Dash
-def run_dash():
-    app.run_server(debug=True, use_reloader=False)
+    # Crear gráficos usando matplotlib
+    fig, ax = plt.subplots()
+    ax.plot(baby_data['timestamp'], baby_data['metric'], label="Métrica")
+    ax.set_title("Gráfica de Métrica del Bebé")
+    ax.set_xlabel("Tiempo")
+    ax.set_ylabel("Métrica")
+    ax.legend()
 
-# Configuración de gráficos en Tkinter usando Matplotlib
-def update_tkinter_charts():
-    baby_data = get_baby_data()
-    characteristics_data = get_characteristics_data()
-    
-    fig_weight.clear()
-    fig_height.clear()
+    # Mostrar gráfico en el panel
+    canvas = FigureCanvasTkAgg(fig, master=dashboard_window)
+    canvas.draw()
+    canvas.get_tk_widget().pack()
 
-    # Gráfico de comparación de peso en Tkinter
-    ax1 = fig_weight.add_subplot(111)
-    characteristics_data = characteristics_data.merge(baby_data[['id_bebe', 'nombre']], left_on='bebe_id_bebe', right_on='id_bebe', how='left')
-    ages = characteristics_data['edadMeses']
-    weights = characteristics_data['peso']
-    expected_weights = [get_reference_weight(age, True)[1] for age in ages]
-    
-    ax1.plot(ages, weights, 'o-', label='Peso Real')
-    ax1.plot(ages, expected_weights, 'x--', label='Peso Esperado')
-    ax1.set_title("Comparación de Peso en Tkinter")
-    ax1.set_xlabel("Edad (meses)")
-    ax1.set_ylabel("Peso (kg)")
-    ax1.legend()
+    # Tabla de datos
+    table_frame = tk.Frame(dashboard_window)
+    table_frame.pack()
+    for i, col in enumerate(baby_data.columns):
+        tk.Label(table_frame, text=col).grid(row=0, column=i)
+    for row, record in enumerate(baby_data.itertuples(), start=1):
+        for col, value in enumerate(record[1:]):
+            tk.Label(table_frame, text=value).grid(row=row, column=col)
 
-    # Gráfico de comparación de altura en Tkinter
-    ax2 = fig_height.add_subplot(111)
-    heights = characteristics_data['altura']
-    expected_heights = [get_reference_height(age, True) for age in ages]
-    
-    ax2.plot(ages, heights, 'o-', label='Altura Real')
-    ax2.plot(ages, expected_heights, 'x--', label='Altura Esperada')
-    ax2.set_title("Comparación de Altura en Tkinter")
-    ax2.set_xlabel("Edad (meses)")
-    ax2.set_ylabel("Altura (cm)")
-    ax2.legend()
-    
-    canvas_weight.draw()
-    canvas_height.draw()
+    # Botón para abrir Dash
+    def open_dash():
+        threading.Thread(target=start_dash_server).start()
 
-    # Refrescar cada 5 segundos
-    root.after(5000, update_tkinter_charts)
+    tk.Button(dashboard_window, text="Ver Gráfica en Tiempo Real", command=open_dash).pack()
 
-# Configuración de la interfaz Tkinter
-root = tk.Tk()
-root.title("Dashboard de Cuna Inteligente")
+# Interfaz de usuario con tkinter
+def main():
+    def handle_login():
+        username = entry_username.get()
+        password = entry_password.get()
+        if login(username, password):
+            messagebox.showinfo("Inicio de sesión exitoso", f"Bienvenido, {username}")
+            window.destroy()
+            select_baby()
+        else:
+            messagebox.showerror("Error", "Credenciales incorrectas")
 
-# Botón para abrir el Dashboard de Dash en el navegador
-def open_dashboard():
-    webbrowser.open("http://127.0.0.1:8050")
+    def handle_register():
+        username = entry_username.get()
+        password = entry_password.get()
+        register_user(username, password)
 
-tk.Button(root, text="Abrir Dashboard Interactivo", command=open_dashboard).pack()
+    def select_baby():
+        baby_window = tk.Tk()
+        baby_window.title("Selecciona o Registra un Bebé")
 
-# Gráficos en Tkinter
-fig_weight = plt.Figure(figsize=(5, 4), dpi=100)
-canvas_weight = FigureCanvasTkAgg(fig_weight, master=root)
-canvas_weight.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # Campo para ingresar el nombre del bebé
+        tk.Label(baby_window, text="Nombre del Bebé").pack()
+        entry_baby_name = tk.Entry(baby_window)
+        entry_baby_name.pack()
 
-fig_height = plt.Figure(figsize=(5, 4), dpi=100)
-canvas_height = FigureCanvasTkAgg(fig_height, master=root)
-canvas_height.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # Campo para ingresar la fecha de nacimiento del bebé
+        tk.Label(baby_window, text="Fecha de Nacimiento (YYYY-MM-DD)").pack()
+        entry_birth_date = tk.Entry(baby_window)
+        entry_birth_date.pack()
 
-# Iniciar el dashboard de Dash en un hilo separado
-threading.Thread(target=run_dash).start()
+        # Función para manejar el registro del bebé
+        def handle_register_baby():
+            baby_name = entry_baby_name.get()
+            birth_date = entry_birth_date.get()
+            if baby_name and birth_date:
+                try:
+                    datetime.strptime(birth_date, "%Y-%m-%d")  # Validar formato de fecha
+                    register_baby(baby_name, birth_date)
+                    update_baby_list()
+                except ValueError:
+                    messagebox.showerror("Error", "Formato de fecha incorrecto. Use YYYY-MM-DD.")
+            else:
+                messagebox.showerror("Error", "Complete todos los campos")
 
-# Iniciar la actualización de los gráficos en Tkinter
-update_tkinter_charts()
-root.mainloop()
+        # Botón para registrar bebé
+        tk.Button(baby_window, text="Registrar Bebé", command=handle_register_baby).pack()
+
+        # Mostrar lista de bebés existentes
+        baby_list_frame = tk.Frame(baby_window)
+        baby_list_frame.pack(pady=10)
+
+        def update_baby_list():
+            # Limpiar la lista actual de bebés
+            for widget in baby_list_frame.winfo_children():
+                widget.destroy()
+            babies = get_babies_for_user()
+            tk.Label(baby_list_frame, text="Seleccione un Bebé:").pack()
+            for baby in babies:
+                tk.Button(baby_list_frame, text=f"{baby[1]}", command=lambda b=baby[0]: show_dashboard(b)).pack()
+
+        update_baby_list()
+
+        baby_window.mainloop()
+
+    # Ventana de inicio de sesión
+    window = tk.Tk()
+    window.title("Inicio de sesión o Registro")
+
+    tk.Label(window, text="Usuario").pack()
+    entry_username = tk.Entry(window)
+    entry_username.pack()
+
+    tk.Label(window, text="Contraseña").pack()
+    entry_password = tk.Entry(window, show="*")
+    entry_password.pack()
+
+    tk.Button(window, text="Iniciar sesión", command=handle_login).pack()
+    tk.Button(window, text="Registrarse", command=handle_register).pack()
+
+    window.mainloop()
+
+if __name__ == "__main__":
+    main()
