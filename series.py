@@ -5,22 +5,27 @@ import math
 import random
 import time
 from machine import Pin
+from Wifi_lib import wifi_init  # Importar Wifi_lib para manejar la conexión Wi-Fi
 
-# Conexión a Wi-Fi
-ssid = "tu_ssid"
-password = "tu_password"
-url = "http://192.168.6.190/insert_data.php"  # URL del script PHP
+url = "http://192.168.6.190/registrocaracteristicas.php"  # URL del script PHP
+# Inicializar la conexión Wi-Fi
+station = wifi_init()  # Usar Wifi_lib para conectarse
 
-# Configuración de Wi-Fi
-station = network.WLAN(network.STA_IF)
-station.active(True)
-station.connect(ssid, password)
+# Configuración de pines para los LEDs y botones
+led_verde = Pin(5, Pin.OUT)
+led_azul = Pin(17, Pin.OUT)
+led_rojo = Pin(18, Pin.OUT)
 
-while not station.isconnected():
-    time.sleep(1)
-    print("Conectando a Wi-Fi...")
+btn_apagar = Pin(33, Pin.IN, Pin.PULL_UP)  # Pulsador para apagar LEDs (GPIO 33)
+btn_rojo = Pin(32, Pin.IN, Pin.PULL_UP)    # Pulsador para LED rojo (GPIO 32)
+btn_verde = Pin(25, Pin.IN, Pin.PULL_UP)   # Pulsador para LED verde (GPIO 25)
+btn_azul = Pin(26, Pin.IN, Pin.PULL_UP)    # Pulsador para LED azul (GPIO 26)
 
-print("Conectado:", station.ifconfig())
+# Función para apagar todos los LEDs
+def apagar_leds():
+    led_rojo.value(0)
+    led_verde.value(0)
+    led_azul.value(0)
 
 # Función de Taylor para coseno
 def serie_taylor_coseno(x, nmax):
@@ -38,87 +43,83 @@ def serie_taylor_seno(x, nmax):
         sumatoria += termino
     return sumatoria
 
-# Función de Fourier para seno
-def serie_fourier_seno(x, nmax):
-    sumatoria = 0
-    for n in range(1, nmax + 1):
-        termino = (2 / (n * math.pi)) * (1 - (-1)**n) * math.sin(n * x)
-        sumatoria += termino
-    return sumatoria
-
-# Función para generar la Serie de Fibonacci
-def serie_fibonacci(nmax):
-    fibonacci_vals = [0, 1]
-    while len(fibonacci_vals) < nmax:
-        next_val = fibonacci_vals[-1] + fibonacci_vals[-2]
-        fibonacci_vals.append(next_val)
-    return fibonacci_vals[:nmax]
-
 # Generación de valores con ruido
-def generar_valores_con_ruido(num_puntos, nmax, funcion, es_fibonacci=False):
+def generar_valores_con_ruido(num_puntos, nmax, funcion):
     x_vals = []
     original_vals = []
     ruido_vals = []
-    error_vals = []
 
-    if es_fibonacci:
-        # Si es la Serie de Fibonacci, no necesitamos el parámetro `x`
-        original_vals = funcion(nmax)
-        for i in range(len(original_vals)):
-            ruido = random.uniform(-0.1, 0.1) * abs(original_vals[i])
-            y_con_ruido = original_vals[i] + ruido
-            error = abs(y_con_ruido - original_vals[i])
-            ruido_vals.append(y_con_ruido)
-            error_vals.append(error)
-        return list(range(len(original_vals))), original_vals, ruido_vals, error_vals
-    
-    # Para series de Taylor y Fourier
     for i in range(num_puntos):
         x = i * (2 * math.pi / num_puntos)
         y_original = funcion(x, nmax)
         
         ruido = random.uniform(-0.1, 0.1) * abs(y_original)
         y_con_ruido = y_original + ruido
-        error = abs(y_con_ruido - y_original)
         
         x_vals.append(x)
         original_vals.append(y_original)
         ruido_vals.append(y_con_ruido)
-        error_vals.append(error)
     
-    return x_vals, original_vals, ruido_vals, error_vals
+    return x_vals, original_vals, ruido_vals
 
 # Envío de datos al servidor
-def enviar_datos_serie(serie, nmax, puntos, es_fibonacci=False):
-    x_vals, original_vals, ruido_vals, error_vals = generar_valores_con_ruido(puntos, nmax, serie, es_fibonacci)
+def enviar_datos(peso, altura, id_registro, fecha, bebe_id):
+    data = {
+        "id_registroCaracteristicas": id_registro,
+        "fecha": fecha,
+        "peso": peso,
+        "altura": altura,
+        "bebe_id_bebe": bebe_id
+    }
+    headers = {'Content-Type': 'application/json'}
+    response = requests.post(url, data=ujson.dumps(data), headers=headers)
+    print("Datos enviados:", data)
+    print("Respuesta del servidor:", response.text)
+    response.close()
+    time.sleep(1)
 
-    for i in range(len(original_vals)):
-        data = {
-            "x": x_vals[i],
-            "original": original_vals[i],
-            "con_ruido": ruido_vals[i],
-            "error": error_vals[i]
-        }
-        headers = {'Content-Type': 'application/json'}
-        response = requests.post(url, data=ujson.dumps(data), headers=headers)
-        print("Datos enviados:", data)
-        print("Respuesta del servidor:", response.text)
-        response.close()
-        time.sleep(1)
-
-# Configuración inicial de la serie y valores
+# Configuración inicial
 num_puntos = 10  # Número de puntos para calcular en la serie
-nmax = 5  # Número de términos en la serie de Taylor o Fourier
+nmax = 5  # Número de términos en la serie de Taylor
+bebe_id = 1  # ID de ejemplo para el bebé
+fecha = "2024-11-03"  # Fecha de ejemplo (puedes modificarla para obtener la fecha actual)
 
-# Enviar valores de cada serie
-print("Enviando serie de Taylor (Coseno)...")
-enviar_datos_serie(serie_taylor_coseno, nmax, num_puntos)
+# Generar valores para coseno y seno con ruido
+x_vals, cos_vals, cos_ruido_vals = generar_valores_con_ruido(num_puntos, nmax, serie_taylor_coseno)
+_, sen_vals, sen_ruido_vals = generar_valores_con_ruido(num_puntos, nmax, serie_taylor_seno)
 
-print("Enviando serie de Taylor (Seno)...")
-enviar_datos_serie(serie_taylor_seno, nmax, num_puntos)
+# Función para enviar las series al servidor
+def enviar_series():
+    for i in range(num_puntos):
+        id_registro = i + 1  # ID de registro único para cada punto
+        peso = cos_ruido_vals[i]  # Usar el valor con ruido de coseno como peso
+        altura = sen_ruido_vals[i]  # Usar el valor con ruido de seno como altura
+        enviar_datos(peso, altura, id_registro, fecha, bebe_id)
 
-print("Enviando serie de Fourier (Seno)...")
-enviar_datos_serie(serie_fourier_seno, nmax, num_puntos)
+# Bucle principal para detectar la pulsación de botones y enviar datos
+while True:
+    if btn_apagar.value() == 0:
+        apagar_leds()
+        print("Botón apagar presionado")
+        enviar_series()
 
-print("Enviando serie de Fibonacci...")
-enviar_datos_serie(serie_fibonacci, nmax, num_puntos, es_fibonacci=True)
+    elif btn_rojo.value() == 0:
+        apagar_leds()
+        led_rojo.value(1)
+        print("Botón rojo presionado")
+        enviar_series()
+
+    elif btn_verde.value() == 0:
+        apagar_leds()
+        led_verde.value(1)
+        print("Botón verde presionado")
+        enviar_series()
+
+    elif btn_azul.value() == 0:
+        apagar_leds()
+        led_azul.value(1)
+        print("Botón azul presionado")
+        enviar_series()
+
+    # Pequeño retardo para evitar múltiples lecturas de una misma pulsación
+    time.sleep(0.1)
