@@ -1,0 +1,96 @@
+import network
+import urequests as requests
+import ujson
+import math
+import random
+import time
+from machine import Pin
+from Wifi_lib import wifi_init  # Importar Wifi_lib para manejar la conexión Wi-Fi
+
+# URLs de los scripts PHP para registrar humedad y temperatura
+url_humedad = "http://192.168.6.190/registroHumedad.php"
+url_temperatura = "http://192.168.6.190/registroTemperatura.php"
+
+# Inicializar la conexión Wi-Fi
+station = wifi_init()  # Usar Wifi_lib para conectarse
+
+# Configuración de pines para los LEDs y botones
+led_verde = Pin(5, Pin.OUT)
+led_azul = Pin(17, Pin.OUT)
+led_rojo = Pin(18, Pin.OUT)
+
+btn_humedad = Pin(32, Pin.IN, Pin.PULL_UP)    # Pulsador para registrar humedad (GPIO 32)
+btn_temperatura = Pin(33, Pin.IN, Pin.PULL_UP) # Pulsador para registrar temperatura (GPIO 33)
+
+# Función para apagar todos los LEDs
+def apagar_leds():
+    led_rojo.value(0)
+    led_verde.value(0)
+    led_azul.value(0)
+
+# Función de Taylor para coseno
+def serie_taylor_coseno(x, nmax):
+    sumatoria = 0
+    for n in range(nmax + 1):
+        termino = ((-1) ** n * (x ** (2 * n))) / math.factorial(2 * n)
+        sumatoria += termino
+    return sumatoria
+
+# Función de Taylor para seno
+def serie_taylor_seno(x, nmax):
+    sumatoria = 0
+    for n in range(nmax + 1):
+        termino = ((-1) ** n * (x ** (2 * n + 1))) / math.factorial(2 * n + 1)
+        sumatoria += termino
+    return sumatoria
+
+# Función para enviar datos de temperatura
+def enviar_temperatura(temperatura, fecha, id_cuna):
+    data = {
+        "temperatura": temperatura,
+        "fecha": fecha,
+        "cuna_id_cuna": id_cuna
+    }
+    headers = {'Content-Type': 'application/json'}
+    response = requests.post(url_temperatura, data=ujson.dumps(data), headers=headers)
+    print("Datos de temperatura enviados:", data)
+    print("Respuesta del servidor:", response.text)
+    response.close()
+
+# Función para enviar datos de humedad
+def enviar_humedad(humedad, fecha, id_cuna):
+    data = {
+        "humedad": humedad,
+        "fecha": fecha,
+        "cuna_id_cuna": id_cuna
+    }
+    headers = {'Content-Type': 'application/json'}
+    response = requests.post(url_humedad, data=ujson.dumps(data), headers=headers)
+    print("Datos de humedad enviados:", data)
+    print("Respuesta del servidor:", response.text)
+    response.close()
+
+# Configuración inicial
+num_puntos = 10  # Número de puntos para calcular en la serie
+nmax = 5  # Número de términos en la serie de Taylor
+cuna_id = 1  # ID de ejemplo para la cuna
+fecha = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())  # Fecha actual
+
+# Bucle principal para detectar la pulsación de botones y enviar datos
+while True:
+    if btn_temperatura.value() == 0:
+        apagar_leds()
+        led_rojo.value(1)
+        print("Botón de temperatura presionado")
+        temperatura = serie_taylor_coseno(random.uniform(0, 2 * math.pi), nmax)
+        enviar_temperatura(temperatura, fecha, cuna_id)
+
+    elif btn_humedad.value() == 0:
+        apagar_leds()
+        led_verde.value(1)
+        print("Botón de humedad presionado")
+        humedad = serie_taylor_seno(random.uniform(0, 2 * math.pi), nmax)
+        enviar_humedad(humedad, fecha, cuna_id)
+
+    # Pequeño retardo para evitar múltiples lecturas de una misma pulsación
+    time.sleep(0.1)
