@@ -8,8 +8,8 @@ from machine import Pin
 from Wifi_lib import wifi_init  # Importar Wifi_lib para manejar la conexión Wi-Fi
 
 # URLs de los scripts PHP para registrar humedad y temperatura
-url_humedad = "http://192.168.6.190/registroHumedad.php"
-url_temperatura = "http://192.168.6.190/registroTemperatura.php"
+url_humedad = "http://192.168.37.84/CunaInteligente/registroHumedad.php"
+url_temperatura = "http://192.168.37.84/CunaInteligente/registroTemperatura.php"
 
 # Inicializar la conexión Wi-Fi
 station = wifi_init()  # Usar Wifi_lib para conectarse
@@ -70,11 +70,33 @@ def enviar_humedad(humedad, fecha, id_cuna):
     print("Respuesta del servidor:", response.text)
     response.close()
 
+# Función para obtener el ID de la cuna
+def obtener_id_cuna():
+    # Simulación de IDs válidos, puedes reemplazarlo con una consulta al servidor
+    ids_disponibles = [1, 2, 3]  # Lista de IDs de ejemplo
+    while True:
+        try:
+            cuna_id = int(input("Por favor, introduce el ID de la cuna: "))
+            if cuna_id in ids_disponibles:
+                return cuna_id
+            else:
+                print("ID de cuna no disponible. Inténtalo de nuevo.")
+        except ValueError:
+            print("Entrada inválida. Por favor, introduce un número entero.")
+
 # Configuración inicial
 num_puntos = 10  # Número de puntos para calcular en la serie
 nmax = 5  # Número de términos en la serie de Taylor
-cuna_id = 1  # ID de ejemplo para la cuna
-fecha = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())  # Fecha actual
+
+# Obtener ID de la cuna antes de iniciar el bucle
+cuna_id = obtener_id_cuna()
+
+# Obtener la fecha actual en el formato adecuado
+def obtener_fecha_formateada():
+    tiempo = time.localtime()
+    return f"{tiempo[0]:04d}-{tiempo[1]:02d}-{tiempo[2]:02d} {tiempo[3]:02d}:{tiempo[4]:02d}:{tiempo[5]:02d}"
+
+fecha = obtener_fecha_formateada()  # Obtener la fecha actual
 
 # Bucle principal para detectar la pulsación de botones y enviar datos
 while True:

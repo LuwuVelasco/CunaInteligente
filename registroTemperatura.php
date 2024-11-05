@@ -12,7 +12,7 @@ try {
         $json = file_get_contents('php://input');
         $data = json_decode($json, true);
 
-        if (isset($data['id_registroTemp'], $data['temperatura'], $data['fecha'], $data['cuna_id_cuna'])) {
+        if (isset($data['temperatura'], $data['fecha'], $data['cuna_id_cuna'])) {
             $stmt = $conn->prepare("INSERT INTO registroTemperatura (id_registroTemp, temperatura, fecha, cuna_id_cuna) 
                                     VALUES (:id_registroTemp, :temperatura, :fecha, :cuna_id_cuna)");
 
