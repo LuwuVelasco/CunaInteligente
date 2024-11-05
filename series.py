@@ -85,8 +85,10 @@ def obtener_id_cuna():
             print("Entrada inválida. Por favor, introduce un número entero.")
 
 # Configuración inicial
-num_puntos = 10  # Número de puntos para calcular en la serie
-nmax = 5  # Número de términos en la serie de Taylor
+num_puntos = 50  # Número de puntos para calcular en la serie
+nmax = 10  # Número de términos en la serie de Taylor
+valores_x = [i * (2 * math.pi) / num_puntos for i in range(num_puntos)]  # Genera puntos de 0 a 2π
+indice = 0  # Índice inicial para recorrer valores_x
 
 # Obtener ID de la cuna antes de iniciar el bucle
 cuna_id = obtener_id_cuna()
@@ -99,20 +101,32 @@ def obtener_fecha_formateada():
 fecha = obtener_fecha_formateada()  # Obtener la fecha actual
 
 # Bucle principal para detectar la pulsación de botones y enviar datos
+
+# Bucle principal para detectar la pulsación de botones y enviar datos
 while True:
     if btn_temperatura.value() == 0:
         apagar_leds()
         led_rojo.value(1)
         print("Botón de temperatura presionado")
-        temperatura = serie_taylor_coseno(random.uniform(0, 2 * math.pi), nmax)
+        
+        # Usar el siguiente valor en valores_x para coseno
+        temperatura = serie_taylor_coseno(valores_x[indice], nmax)
         enviar_temperatura(temperatura, fecha, cuna_id)
+
+        # Avanzar al siguiente índice, reiniciar si alcanza el final del vector
+        indice = (indice + 1) % num_puntos
 
     elif btn_humedad.value() == 0:
         apagar_leds()
         led_verde.value(1)
         print("Botón de humedad presionado")
-        humedad = serie_taylor_seno(random.uniform(0, 2 * math.pi), nmax)
+        
+        # Usar el siguiente valor en valores_x para seno
+        humedad = serie_taylor_seno(valores_x[indice], nmax)
         enviar_humedad(humedad, fecha, cuna_id)
+
+        # Avanzar al siguiente índice, reiniciar si alcanza el final del vector
+        indice = (indice + 1) % num_puntos
 
     # Pequeño retardo para evitar múltiples lecturas de una misma pulsación
     time.sleep(0.1)
