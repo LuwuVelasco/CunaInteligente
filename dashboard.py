@@ -248,10 +248,29 @@ def seleccionar_bebe():
 def iniciar_dashboard():
     ventana_dashboard = tk.Toplevel()
     ventana_dashboard.title("Dashboard de Cuna Inteligente")
-    ventana_dashboard.geometry("1000x700")
+    ventana_dashboard.geometry("1200x700")  # Tamaño ajustado
 
-    # Crear marcos para los gráficos y contadores
-    frame_graficos = tk.Frame(ventana_dashboard)
+    # Contenedor principal con canvas para permitir scroll
+    canvas = tk.Canvas(ventana_dashboard)
+    canvas.pack(side="left", fill="both", expand=True)
+
+    # Scrollbar para el canvas
+    scrollbar = ttk.Scrollbar(ventana_dashboard, orient="vertical", command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    # Crear un frame dentro del canvas
+    dashboard_frame = ttk.Frame(canvas)
+    canvas.create_window((0, 0), window=dashboard_frame, anchor="nw")
+
+    # Configurar el frame para actualizar el tamaño del canvas
+    def ajustar_canvas(event):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+    dashboard_frame.bind("<Configure>", ajustar_canvas)
+
+    # Contenido del dashboard
+    frame_graficos = tk.Frame(dashboard_frame)
     frame_graficos.pack(pady=20)
 
     temp_img_label = tk.Label(frame_graficos)
@@ -260,27 +279,43 @@ def iniciar_dashboard():
     hum_img_label = tk.Label(frame_graficos)
     hum_img_label.grid(row=0, column=1, padx=20)
 
-    comb_img_label = tk.Label(frame_graficos)
-    comb_img_label.grid(row=1, column=0, columnspan=2, pady=20)
-
     # Contadores para valores actuales
-    temp_val_label = ttk.Label(ventana_dashboard, text="Temperatura Actual: N/A", font=("Arial", 12, "bold"))
+    temp_val_label = ttk.Label(dashboard_frame, text="Temperatura Actual: N/A", font=("Arial", 12, "bold"))
     temp_val_label.pack(pady=5)
-    
-    hum_val_label = ttk.Label(ventana_dashboard, text="Humedad Actual: N/A", font=("Arial", 12, "bold"))
+
+    hum_val_label = ttk.Label(dashboard_frame, text="Humedad Actual: N/A", font=("Arial", 12, "bold"))
     hum_val_label.pack(pady=5)
 
     # Indicadores de seguridad
-    temp_status_label = ttk.Label(ventana_dashboard, text="Condición de Temperatura: N/A", font=("Arial", 12, "bold"))
+    temp_status_label = ttk.Label(dashboard_frame, text="Condición de Temperatura: N/A", font=("Arial", 12, "bold"))
     temp_status_label.pack(pady=5)
-    
-    hum_status_label = ttk.Label(ventana_dashboard, text="Condición de Humedad: N/A", font=("Arial", 12, "bold"))
+
+    hum_status_label = ttk.Label(dashboard_frame, text="Condición de Humedad: N/A", font=("Arial", 12, "bold"))
     hum_status_label.pack(pady=5)
+
+    # Entrada para definir el número de registros
+    filtro_frame = ttk.Frame(dashboard_frame)
+    filtro_frame.pack(pady=10)
+    ttk.Label(filtro_frame, text="Número de registros recientes:").grid(row=0, column=0, padx=5)
+    entry_limite = ttk.Entry(filtro_frame, width=5)
+    entry_limite.grid(row=0, column=1, padx=5)
+    entry_limite.insert(0, "10")
+
+    # Tabla de datos de temperatura
+    temp_table = ttk.Treeview(dashboard_frame, columns=("Fecha", "Temperatura"), show="headings")
+    temp_table.heading("Fecha", text="Fecha")
+    temp_table.heading("Temperatura", text="Temperatura (°C)")
+    temp_table.pack(pady=10, fill="x")
+
+    # Tabla de datos de humedad
+    hum_table = ttk.Treeview(dashboard_frame, columns=("Fecha", "Humedad"), show="headings")
+    hum_table.heading("Fecha", text="Fecha")
+    hum_table.heading("Humedad", text="Humedad (%)")
+    hum_table.pack(pady=10, fill="x")
 
     # Cola para manejar los datos de actualización desde el hilo secundario
     update_queue = Queue()
 
-    # Configuración de actualización y filtrado de datos
     actualizar = True
 
     def on_closing():
@@ -290,26 +325,25 @@ def iniciar_dashboard():
 
     ventana_dashboard.protocol("WM_DELETE_WINDOW", on_closing)
 
-    # Función de gráficos en el hilo secundario
+    # Función para obtener y actualizar gráficos y tablas en el hilo secundario
     def obtener_datos_graficos():
         while actualizar:
-            temperaturas = obtener_datos("SELECT fecha, temperatura FROM registroTemperatura ORDER BY fecha DESC LIMIT 10")
-            humedades = obtener_datos("SELECT fecha, humedad FROM registroHumedad ORDER BY fecha DESC LIMIT 10")
+            limite = int(entry_limite.get())  # Leer el valor del límite de registros
+            temperaturas = obtener_datos(f"SELECT fecha, temperatura FROM registroTemperatura ORDER BY fecha DESC LIMIT {limite}")
+            humedades = obtener_datos(f"SELECT fecha, humedad FROM registroHumedad ORDER BY fecha DESC LIMIT {limite}")
 
             if temperaturas and humedades:
                 fechas_temp, temp_vals = zip(*temperaturas)
                 fechas_hum, hum_vals = zip(*humedades)
 
-                # Colocar datos en la cola para actualizar el dashboard
-                update_queue.put((fechas_temp, temp_vals, fechas_hum, hum_vals))
+                update_queue.put((fechas_temp, temp_vals, fechas_hum, hum_vals, temperaturas, humedades))
 
             time.sleep(5)
 
     # Función de actualización en el hilo principal
     def actualizar_dashboard():
         try:
-            # Extraer datos de la cola
-            fechas_temp, temp_vals, fechas_hum, hum_vals = update_queue.get_nowait()
+            fechas_temp, temp_vals, fechas_hum, hum_vals, temperaturas, humedades = update_queue.get_nowait()
 
             # Actualizar contadores
             temp_val_label.config(text=f"Temperatura Actual: {temp_vals[0]} °C")
@@ -319,10 +353,20 @@ def iniciar_dashboard():
             temp_status_label.config(text="Condición de Temperatura: Segura" if 20 <= temp_vals[0] <= 30 else "Condición de Temperatura: Insegura")
             hum_status_label.config(text="Condición de Humedad: Segura" if 40 <= hum_vals[0] <= 60 else "Condición de Humedad: Insegura")
 
+            # Actualizar tabla de temperatura
+            temp_table.delete(*temp_table.get_children())
+            for fecha, temp in temperaturas:
+                temp_table.insert("", "end", values=(fecha, temp))
+
+            # Actualizar tabla de humedad
+            hum_table.delete(*hum_table.get_children())
+            for fecha, hum in humedades:
+                hum_table.insert("", "end", values=(fecha, hum))
+
             # Gráfico de temperatura
             plt.figure(figsize=(4, 3))
             plt.plot(fechas_temp, temp_vals, color='red', marker='o')
-            plt.title("Temperatura (Últimos 10 registros)")
+            plt.title("Temperatura (Últimos registros)")
             plt.xlabel("Fecha")
             plt.ylabel("Temperatura (°C)")
             plt.grid(True)
@@ -338,7 +382,7 @@ def iniciar_dashboard():
             # Gráfico de humedad
             plt.figure(figsize=(4, 3))
             plt.plot(fechas_hum, hum_vals, color='blue', marker='o')
-            plt.title("Humedad (Últimos 10 registros)")
+            plt.title("Humedad (Últimos registros)")
             plt.xlabel("Fecha")
             plt.ylabel("Humedad (%)")
             plt.grid(True)
@@ -351,16 +395,12 @@ def iniciar_dashboard():
             hum_img_label.image = hum_img
             plt.close()
 
-        except queue.Empty:  # Cambiado a queue.Empty
+        except queue.Empty:
             pass
 
-        # Volver a llamar cada segundo
-        ventana_dashboard.after(1000, actualizar_dashboard)
+        ventana_dashboard.after(500, actualizar_dashboard)
 
-    # Iniciar hilo para recolección continua de datos
     threading.Thread(target=obtener_datos_graficos, daemon=True).start()
-
-    # Iniciar ciclo de actualización en la interfaz principal
     actualizar_dashboard()
 
 # Iniciar la aplicación
