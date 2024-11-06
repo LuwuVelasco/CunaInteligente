@@ -364,10 +364,11 @@ def iniciar_dashboard():
                 hum_table.insert("", "end", values=(fecha, hum))
 
             # Gráfico de temperatura
-            plt.figure(figsize=(4, 3))
+            plt.figure(figsize=(4, 5))
             plt.plot(fechas_temp, temp_vals, color='red', marker='o')
             plt.title("Temperatura (Últimos registros)")
             plt.xlabel("Fecha")
+            plt.xticks(rotation=90)
             plt.ylabel("Temperatura (°C)")
             plt.grid(True)
             temp_buf = io.BytesIO()
@@ -380,10 +381,11 @@ def iniciar_dashboard():
             plt.close()
 
             # Gráfico de humedad
-            plt.figure(figsize=(4, 3))
+            plt.figure(figsize=(4, 5))
             plt.plot(fechas_hum, hum_vals, color='blue', marker='o')
             plt.title("Humedad (Últimos registros)")
             plt.xlabel("Fecha")
+            plt.xticks(rotation=90)
             plt.ylabel("Humedad (%)")
             plt.grid(True)
             hum_buf = io.BytesIO()
