@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import threading
 import time
 import io
+from queue import Queue
+import queue
 
 id_usuario = None
 
@@ -24,14 +26,17 @@ def conectar_bd():
         return None
 
 # Función para obtener datos de la base de datos
-def obtener_datos(query):
-    conexion = conectar_bd()
-    if conexion:
-        cursor = conexion.cursor()
-        cursor.execute(query)
-        datos = cursor.fetchall()
-        conexion.close()
-        return datos
+def obtener_datos(query, params=()):
+    try:
+        conexion = conectar_bd()
+        if conexion:
+            cursor = conexion.cursor()
+            cursor.execute(query, params)
+            datos = cursor.fetchall()
+            conexion.close()
+            return datos
+    except mysql.connector.Error as err:
+        print(f"Error al obtener datos: {err}")
     return []
 
 # Función de inicio de sesión
@@ -243,9 +248,9 @@ def seleccionar_bebe():
 def iniciar_dashboard():
     ventana_dashboard = tk.Toplevel()
     ventana_dashboard.title("Dashboard de Cuna Inteligente")
-    ventana_dashboard.geometry("800x600")
+    ventana_dashboard.geometry("1000x700")
 
-    # Crear marcos para los gráficos
+    # Crear marcos para los gráficos y contadores
     frame_graficos = tk.Frame(ventana_dashboard)
     frame_graficos.pack(pady=20)
 
@@ -255,6 +260,27 @@ def iniciar_dashboard():
     hum_img_label = tk.Label(frame_graficos)
     hum_img_label.grid(row=0, column=1, padx=20)
 
+    comb_img_label = tk.Label(frame_graficos)
+    comb_img_label.grid(row=1, column=0, columnspan=2, pady=20)
+
+    # Contadores para valores actuales
+    temp_val_label = ttk.Label(ventana_dashboard, text="Temperatura Actual: N/A", font=("Arial", 12, "bold"))
+    temp_val_label.pack(pady=5)
+    
+    hum_val_label = ttk.Label(ventana_dashboard, text="Humedad Actual: N/A", font=("Arial", 12, "bold"))
+    hum_val_label.pack(pady=5)
+
+    # Indicadores de seguridad
+    temp_status_label = ttk.Label(ventana_dashboard, text="Condición de Temperatura: N/A", font=("Arial", 12, "bold"))
+    temp_status_label.pack(pady=5)
+    
+    hum_status_label = ttk.Label(ventana_dashboard, text="Condición de Humedad: N/A", font=("Arial", 12, "bold"))
+    hum_status_label.pack(pady=5)
+
+    # Cola para manejar los datos de actualización desde el hilo secundario
+    update_queue = Queue()
+
+    # Configuración de actualización y filtrado de datos
     actualizar = True
 
     def on_closing():
@@ -264,49 +290,78 @@ def iniciar_dashboard():
 
     ventana_dashboard.protocol("WM_DELETE_WINDOW", on_closing)
 
-    def actualizar_graficos():
-        nonlocal actualizar
+    # Función de gráficos en el hilo secundario
+    def obtener_datos_graficos():
         while actualizar:
             temperaturas = obtener_datos("SELECT fecha, temperatura FROM registroTemperatura ORDER BY fecha DESC LIMIT 10")
             humedades = obtener_datos("SELECT fecha, humedad FROM registroHumedad ORDER BY fecha DESC LIMIT 10")
 
-            if temperaturas:
-                fechas, temp_vals = zip(*temperaturas)
-                plt.figure(figsize=(4, 3))
-                plt.plot(fechas, temp_vals, color='red', marker='o')
-                plt.title("Temperatura (Últimos 10 registros)")
-                plt.xlabel("Fecha")
-                plt.ylabel("Temperatura (°C)")
-                plt.grid(True)
-                temp_buf = io.BytesIO()
-                plt.savefig(temp_buf, format="png")
-                temp_buf.seek(0)
-                temp_img = Image.open(temp_buf)
-                temp_img = ImageTk.PhotoImage(temp_img)
-                temp_img_label.configure(image=temp_img)
-                temp_img_label.image = temp_img
-                plt.close()
+            if temperaturas and humedades:
+                fechas_temp, temp_vals = zip(*temperaturas)
+                fechas_hum, hum_vals = zip(*humedades)
 
-            if humedades:
-                fechas, hum_vals = zip(*humedades)
-                plt.figure(figsize=(4, 3))
-                plt.plot(fechas, hum_vals, color='blue', marker='o')
-                plt.title("Humedad (Últimos 10 registros)")
-                plt.xlabel("Fecha")
-                plt.ylabel("Humedad (%)")
-                plt.grid(True)
-                hum_buf = io.BytesIO()
-                plt.savefig(hum_buf, format="png")
-                hum_buf.seek(0)
-                hum_img = Image.open(hum_buf)
-                hum_img = ImageTk.PhotoImage(hum_img)
-                hum_img_label.configure(image=hum_img)
-                hum_img_label.image = hum_img
-                plt.close()
+                # Colocar datos en la cola para actualizar el dashboard
+                update_queue.put((fechas_temp, temp_vals, fechas_hum, hum_vals))
 
             time.sleep(5)
 
-    threading.Thread(target=actualizar_graficos, daemon=True).start()
+    # Función de actualización en el hilo principal
+    def actualizar_dashboard():
+        try:
+            # Extraer datos de la cola
+            fechas_temp, temp_vals, fechas_hum, hum_vals = update_queue.get_nowait()
+
+            # Actualizar contadores
+            temp_val_label.config(text=f"Temperatura Actual: {temp_vals[0]} °C")
+            hum_val_label.config(text=f"Humedad Actual: {hum_vals[0]} %")
+
+            # Indicadores de condiciones seguras
+            temp_status_label.config(text="Condición de Temperatura: Segura" if 20 <= temp_vals[0] <= 30 else "Condición de Temperatura: Insegura")
+            hum_status_label.config(text="Condición de Humedad: Segura" if 40 <= hum_vals[0] <= 60 else "Condición de Humedad: Insegura")
+
+            # Gráfico de temperatura
+            plt.figure(figsize=(4, 3))
+            plt.plot(fechas_temp, temp_vals, color='red', marker='o')
+            plt.title("Temperatura (Últimos 10 registros)")
+            plt.xlabel("Fecha")
+            plt.ylabel("Temperatura (°C)")
+            plt.grid(True)
+            temp_buf = io.BytesIO()
+            plt.savefig(temp_buf, format="png")
+            temp_buf.seek(0)
+            temp_img = Image.open(temp_buf)
+            temp_img = ImageTk.PhotoImage(temp_img)
+            temp_img_label.configure(image=temp_img)
+            temp_img_label.image = temp_img
+            plt.close()
+
+            # Gráfico de humedad
+            plt.figure(figsize=(4, 3))
+            plt.plot(fechas_hum, hum_vals, color='blue', marker='o')
+            plt.title("Humedad (Últimos 10 registros)")
+            plt.xlabel("Fecha")
+            plt.ylabel("Humedad (%)")
+            plt.grid(True)
+            hum_buf = io.BytesIO()
+            plt.savefig(hum_buf, format="png")
+            hum_buf.seek(0)
+            hum_img = Image.open(hum_buf)
+            hum_img = ImageTk.PhotoImage(hum_img)
+            hum_img_label.configure(image=hum_img)
+            hum_img_label.image = hum_img
+            plt.close()
+
+        except queue.Empty:  # Cambiado a queue.Empty
+            pass
+
+        # Volver a llamar cada segundo
+        ventana_dashboard.after(1000, actualizar_dashboard)
+
+    # Iniciar hilo para recolección continua de datos
+    threading.Thread(target=obtener_datos_graficos, daemon=True).start()
+
+    # Iniciar ciclo de actualización en la interfaz principal
+    actualizar_dashboard()
 
 # Iniciar la aplicación
 ventana_inicio()
