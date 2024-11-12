@@ -66,6 +66,7 @@ def registrar_usuario(nombre, apellido_p, apellido_m, username, gmail, password)
     return False
 
 # Ventana de registro de usuario
+# Ventana de registro de usuario
 def ventana_registro():
     def registrar():
         nombre = entry_nombre.get()
@@ -85,6 +86,15 @@ def ventana_registro():
     ventana_registro.title("Registro de Usuario")
     ventana_registro.geometry("400x400")
     ventana_registro.configure(bg="#f0f0f0")
+
+    # Centrar ventana
+    ancho_ventana = 400
+    alto_ventana = 400
+    ancho_pantalla = ventana_registro.winfo_screenwidth()
+    alto_pantalla = ventana_registro.winfo_screenheight()
+    x_ventana = (ancho_pantalla // 2) - (ancho_ventana // 2)
+    y_ventana = (alto_pantalla // 2) - (alto_ventana // 2)
+    ventana_registro.geometry(f"{ancho_ventana}x{alto_ventana}+{x_ventana}+{y_ventana}")
 
     header = ttk.Label(ventana_registro, text="Registro de Usuario", font=("Arial", 16, "bold"), background="#f0f0f0")
     header.pack(pady=(10, 20))
@@ -133,6 +143,15 @@ def ventana_inicio():
     ventana.title("Inicio de Sesión")
     ventana.geometry("400x300")
     ventana.configure(bg="#f0f0f0")
+
+    # Centrar ventana
+    ancho_ventana = 400
+    alto_ventana = 300
+    ancho_pantalla = ventana.winfo_screenwidth()
+    alto_pantalla = ventana.winfo_screenheight()
+    x_ventana = (ancho_pantalla // 2) - (ancho_ventana // 2)
+    y_ventana = (alto_pantalla // 2) - (alto_ventana // 2)
+    ventana.geometry(f"{ancho_ventana}x{alto_ventana}+{x_ventana}+{y_ventana}")
 
     style = ttk.Style()
     style.configure("TButton", font=("Arial", 12), padding=10)
@@ -189,7 +208,7 @@ def seleccionar_bebe():
             if conexion:
                 cursor = conexion.cursor()
                 cursor.execute(
-                    "INSERT INTO bebe (nombre, apellidoPaterno, apellidoMaterno, fechaDeNacimiento, usuario_id_usuario) VALUES (%s, %s, %s, %s, %s)",
+                    "INSERT INTO bebe (nombre, apellidoPaterno, apellidoMaterno, fechaNacimiento, usuario_id_usuario) VALUES (%s, %s, %s, %s, %s)",
                     (nombre, apellido_p, apellido_m, fecha_nac, id_usuario)
                 )
                 conexion.commit()
@@ -197,58 +216,71 @@ def seleccionar_bebe():
                 messagebox.showinfo("Éxito", "Bebé registrado exitosamente")
                 ventana_agregar_bebe.destroy()
                 cargar_bebes()
+            else:
+                messagebox.showerror("Error", "No se pudo registrar el bebé")
 
-        ventana_agregar_bebe = tk.Toplevel(ventana_bebe)
-        ventana_agregar_bebe.title("Registrar Nuevo Bebé")
+        ventana_agregar_bebe = tk.Toplevel()
+        ventana_agregar_bebe.title("Agregar Bebé")
         ventana_agregar_bebe.geometry("350x250")
         ventana_agregar_bebe.configure(bg="#f0f0f0")
 
-        header = ttk.Label(ventana_agregar_bebe, text="Registrar Nuevo Bebé", font=("Arial", 14, "bold"), background="#f0f0f0")
-        header.pack(pady=(10, 10))
+        # Centrar ventana
+        ancho_ventana = 350
+        alto_ventana = 250
+        ancho_pantalla = ventana_agregar_bebe.winfo_screenwidth()
+        alto_pantalla = ventana_agregar_bebe.winfo_screenheight()
+        x_ventana = (ancho_pantalla // 2) - (ancho_ventana // 2)
+        y_ventana = (alto_pantalla // 2) - (alto_ventana // 2)
+        ventana_agregar_bebe.geometry(f"{ancho_ventana}x{alto_ventana}+{x_ventana}+{y_ventana}")
 
-        form_frame = ttk.Frame(ventana_agregar_bebe, padding=10)
-        form_frame.pack(fill='both', expand=True)
+        ttk.Label(ventana_agregar_bebe, text="Nombre:").pack(pady=5)
+        entry_nombre = ttk.Entry(ventana_agregar_bebe)
+        entry_nombre.pack()
 
-        ttk.Label(form_frame, text="Nombre:").grid(row=0, column=0, sticky="w", pady=5)
-        entry_nombre = ttk.Entry(form_frame, width=25)
-        entry_nombre.grid(row=0, column=1, pady=5)
+        ttk.Label(ventana_agregar_bebe, text="Apellido Paterno:").pack(pady=5)
+        entry_apellido_p = ttk.Entry(ventana_agregar_bebe)
+        entry_apellido_p.pack()
 
-        ttk.Label(form_frame, text="Apellido Paterno:").grid(row=1, column=0, sticky="w", pady=5)
-        entry_apellido_p = ttk.Entry(form_frame, width=25)
-        entry_apellido_p.grid(row=1, column=1, pady=5)
+        ttk.Label(ventana_agregar_bebe, text="Apellido Materno:").pack(pady=5)
+        entry_apellido_m = ttk.Entry(ventana_agregar_bebe)
+        entry_apellido_m.pack()
 
-        ttk.Label(form_frame, text="Apellido Materno:").grid(row=2, column=0, sticky="w", pady=5)
-        entry_apellido_m = ttk.Entry(form_frame, width=25)
-        entry_apellido_m.grid(row=2, column=1, pady=5)
+        ttk.Label(ventana_agregar_bebe, text="Fecha de Nacimiento (AAAA-MM-DD):").pack(pady=5)
+        entry_fecha_nac = ttk.Entry(ventana_agregar_bebe)
+        entry_fecha_nac.pack()
 
-        ttk.Label(form_frame, text="Fecha de Nacimiento (AAAA-MM-DD):").grid(row=3, column=0, sticky="w", pady=5)
-        entry_fecha_nac = ttk.Entry(form_frame, width=25)
-        entry_fecha_nac.grid(row=3, column=1, pady=5)
+        ttk.Button(ventana_agregar_bebe, text="Registrar Bebé", command=registrar_nuevo_bebe).pack(pady=10)
 
-        ttk.Button(ventana_agregar_bebe, text="Registrar", command=registrar_nuevo_bebe).pack(pady=10)
-
-    ventana_bebe = tk.Tk()
+    ventana_bebe = tk.Toplevel()
     ventana_bebe.title("Seleccionar Bebé")
     ventana_bebe.geometry("400x300")
     ventana_bebe.configure(bg="#f0f0f0")
 
-    header = ttk.Label(ventana_bebe, text="Selecciona un Bebé", font=("Arial", 16, "bold"), background="#f0f0f0")
-    header.pack(pady=(20, 10))
+    # Centrar ventana
+    ancho_ventana = 400
+    alto_ventana = 300
+    ancho_pantalla = ventana_bebe.winfo_screenwidth()
+    alto_pantalla = ventana_bebe.winfo_screenheight()
+    x_ventana = (ancho_pantalla // 2) - (ancho_ventana // 2)
+    y_ventana = (alto_pantalla // 2) - (alto_ventana // 2)
+    ventana_bebe.geometry(f"{ancho_ventana}x{alto_ventana}+{x_ventana}+{y_ventana}")
+
+    header = ttk.Label(ventana_bebe, text="Seleccionar Bebé", font=("Arial", 16, "bold"), background="#f0f0f0")
+    header.pack(pady=10)
 
     frame_bebes = ttk.Frame(ventana_bebe, padding=10)
     frame_bebes.pack(fill='both', expand=True)
 
     cargar_bebes()
 
-    ttk.Button(ventana_bebe, text="Añadir Bebé", command=agregar_bebe).pack(pady=10)
-
+    ttk.Button(ventana_bebe, text="Agregar Bebé", command=agregar_bebe).pack(pady=10)
     ventana_bebe.mainloop()
 
 # Ventana del dashboard interactivo
 def iniciar_dashboard():
     ventana_dashboard = tk.Toplevel()
     ventana_dashboard.title("Dashboard de Cuna Inteligente")
-    ventana_dashboard.geometry("1200x700")  # Tamaño ajustado
+    ventana_dashboard.state("zoomed")  # Maximizar la ventana
 
     # Contenedor principal con canvas para permitir scroll
     canvas = tk.Canvas(ventana_dashboard)
@@ -268,16 +300,6 @@ def iniciar_dashboard():
         canvas.configure(scrollregion=canvas.bbox("all"))
 
     dashboard_frame.bind("<Configure>", ajustar_canvas)
-
-    # Contenido del dashboard
-    frame_graficos = tk.Frame(dashboard_frame)
-    frame_graficos.pack(pady=20)
-
-    temp_img_label = tk.Label(frame_graficos)
-    temp_img_label.grid(row=0, column=0, padx=20)
-
-    hum_img_label = tk.Label(frame_graficos)
-    hum_img_label.grid(row=0, column=1, padx=20)
 
     # Contadores para valores actuales
     temp_val_label = ttk.Label(dashboard_frame, text="Temperatura Actual: N/A", font=("Arial", 12, "bold"))
@@ -300,6 +322,16 @@ def iniciar_dashboard():
     entry_limite = ttk.Entry(filtro_frame, width=5)
     entry_limite.grid(row=0, column=1, padx=5)
     entry_limite.insert(0, "10")
+
+    # Contenido del dashboard
+    frame_graficos = tk.Frame(dashboard_frame)
+    frame_graficos.pack(pady=20)
+
+    temp_img_label = tk.Label(frame_graficos)
+    temp_img_label.grid(row=0, column=0, padx=20)
+
+    hum_img_label = tk.Label(frame_graficos)
+    hum_img_label.grid(row=0, column=1, padx=20)
 
     # Tabla de datos de temperatura
     temp_table = ttk.Treeview(dashboard_frame, columns=("Fecha", "Temperatura"), show="headings")
