@@ -34,6 +34,11 @@ def alta(tabla, values):
         if len(values) != 3:
             messagebox.showerror("Error", "Debe proporcionar exactamente 3 valores para la tabla 'registroHumedad'.")
             return
+    elif tabla == "usuario":
+        sql = "INSERT INTO usuario (username, nombre, apellidoPaterno, apellidoMaterno, gmail, contrasenia) VALUES (%s, %s, %s, %s, %s, %s)"
+        if len(values) != 6:
+            messagebox.showerror("Error", "Debe proporcionar exactamente 6 valores para la tabla 'usuario'.")
+            return
     
     try:
         cursor.execute(sql, values)
@@ -54,6 +59,8 @@ def baja(tabla, id_valor):
         sql = "DELETE FROM registroHumedad WHERE id_registroHumedad = %s"
     elif tabla == "bebe":
         sql = "DELETE FROM bebe WHERE id_bebe = %s"
+    elif tabla == "usuario":
+        sql = "DELETE FROM usuario WHERE id_usuario = %s"
 
     try:
         cursor.execute(sql, (id_valor,))
@@ -74,6 +81,8 @@ def modificacion(tabla, id_valor, new_values):
         sql = "UPDATE registroTemperatura SET temperatura = %s, fecha = %s, cuna_id_cuna = %s WHERE id_registroTemp = %s"
     elif tabla == "registroHumedad":
         sql = "UPDATE registroHumedad SET humedad = %s, fecha = %s, cuna_id_cuna = %s WHERE id_registroHumedad = %s"
+    elif tabla == "usuario":
+        sql = "UPDATE usuario SET username = %s, nombre = %s, apellidoPaterno = %s, apellidoMaterno = %s, gmail = %s, contrasenia = %s WHERE id_usuario = %s"
     
     try:
         cursor.execute(sql, (*new_values, id_valor))
@@ -108,6 +117,15 @@ def obtener_datos_registro_humedad(id_registroHumedad):
     conn.close()
     return datos_humedad
 
+# Función para obtener datos específicos de un registro de usuario
+def obtener_datos_usuario(id_usuario):
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT username, nombre, apellidoPaterno, apellidoMaterno, gmail, contrasenia FROM usuario WHERE id_usuario = %s", (id_usuario,))
+    resultado = cursor.fetchone()
+    conn.close()
+    return resultado
+
 # Código para la interfaz de la tabla `registroTemperatura` y `registroHumedad`
 def tabla_interfaz(tabla):
     def ejecutar_operacion():
@@ -121,6 +139,8 @@ def tabla_interfaz(tabla):
                 values = (temperatura_entry.get(), fecha_entry.get(), cuna_id_entry.get())
             elif tabla == "registroHumedad":
                 values = (humedad_entry.get(), fecha_entry.get(), cuna_id_entry.get())
+            elif tabla == "usuario":
+                values = (username_entry.get(), nombre_entry.get(), apellidoP_entry.get(), apellidoM_entry.get(), gmail_entry.get(), contrasenia_entry.get())            
             
             alta(tabla, values)
             
@@ -135,6 +155,8 @@ def tabla_interfaz(tabla):
                 new_values = (temperatura_entry.get(), fecha_entry.get(), cuna_id_entry.get())
             elif tabla == "registroHumedad":
                 new_values = (humedad_entry.get(), fecha_entry.get(), cuna_id_entry.get())
+            elif tabla == "usuario":
+                new_values = (username_entry.get(), nombre_entry.get(), apellidoP_entry.get(), apellidoM_entry.get(), gmail_entry.get(), contrasenia_entry.get())
             modificacion(tabla, id_valor, new_values)
 
     def autocompletar_campos():
@@ -177,7 +199,25 @@ def tabla_interfaz(tabla):
                     id_usuario_entry.insert(0, datos_bebe[4])
                 else:
                     messagebox.showwarning("No Encontrado", "No se encontraron datos para ese ID")
+            if tabla == "usuario":
+                datos_usuario = obtener_datos_usuario(id_valor)
+                if datos_usuario:
+                    username_entry.delete(0, END)
+                    username_entry.insert(0, datos_usuario[0])
+                    nombre_entry.delete(0, END)
+                    nombre_entry.insert(0, datos_usuario[1])
+                    apellidoP_entry.delete(0, END)
+                    apellidoP_entry.insert(0, datos_usuario[2])
+                    apellidoM_entry.delete(0, END)
+                    apellidoM_entry.insert(0, datos_usuario[3])
+                    gmail_entry.delete(0, END)
+                    gmail_entry.insert(0, datos_usuario[4])
+                    contrasenia_entry.delete(0, END)
+                    contrasenia_entry.insert(0, datos_usuario[5])
+                else:
+                    messagebox.showwarning("No Encontrado", "No se encontraron datos para ese ID")
 
+            
     ventana = Toplevel()
     ventana.title(f"Operaciones ABM para la tabla {tabla}")
     ventana.geometry("500x600")
@@ -265,6 +305,38 @@ def tabla_interfaz(tabla):
         ttk.Label(main_frame, text="ID Cuna").grid(row=4, column=0, sticky=W, pady=5)
         cuna_id_entry = ttk.Entry(main_frame)
         cuna_id_entry.grid(row=4, column=1, padx=10)
+    
+    elif tabla == "usuario":
+        ttk.Label(main_frame, text="ID (para Baja y Modificación):").grid(row=1, column=0, sticky=W, pady=5)
+        id_entry = ttk.Entry(main_frame)
+        id_entry.grid(row=1, column=1, padx=10)
+
+        autocompletar_btn = ttk.Button(main_frame, text="Autocompletar", command=autocompletar_campos, style='info.TButton')
+        autocompletar_btn.grid(row=1, column=2, padx=10)
+
+        ttk.Label(main_frame, text="Username").grid(row=2, column=0, sticky=W, pady=5)
+        username_entry = ttk.Entry(main_frame)
+        username_entry.grid(row=2, column=1, padx=10)
+
+        ttk.Label(main_frame, text="Nombre").grid(row=3, column=0, sticky=W, pady=5)
+        nombre_entry = ttk.Entry(main_frame)
+        nombre_entry.grid(row=3, column=1, padx=10)
+
+        ttk.Label(main_frame, text="Apellido Paterno").grid(row=4, column=0, sticky=W, pady=5)
+        apellidoP_entry = ttk.Entry(main_frame)
+        apellidoP_entry.grid(row=4, column=1, padx=10)
+
+        ttk.Label(main_frame, text="Apellido Materno").grid(row=5, column=0, sticky=W, pady=5)
+        apellidoM_entry = ttk.Entry(main_frame)
+        apellidoM_entry.grid(row=5, column=1, padx=10)
+
+        ttk.Label(main_frame, text="Gmail").grid(row=6, column=0, sticky=W, pady=5)
+        gmail_entry = ttk.Entry(main_frame)
+        gmail_entry.grid(row=6, column=1, padx=10)
+
+        ttk.Label(main_frame, text="Contraseña").grid(row=7, column=0, sticky=W, pady=5)
+        contrasenia_entry = ttk.Entry(main_frame, show="*")
+        contrasenia_entry.grid(row=7, column=1, padx=10)
 
     ejecutar_btn = ttk.Button(main_frame, text="Ejecutar", command=ejecutar_operacion, style='primary.TButton')
     ejecutar_btn.grid(row=10, column=1, pady=20)
@@ -290,6 +362,9 @@ def abrir_pantalla_principal():
 
     humedad_btn = ttk.Button(main_frame, text="Registro de Humedad", command=lambda: tabla_interfaz("registroHumedad"), style='primary.TButton')
     humedad_btn.pack(fill=BOTH, pady=5)
+    
+    usuario_btn = ttk.Button(main_frame, text="Registro de Usuario", command=lambda: tabla_interfaz("usuario"), style='primary.TButton')
+    usuario_btn.pack(fill=BOTH, pady=5)
 
     ventana_principal.mainloop()
 
