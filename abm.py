@@ -19,9 +19,8 @@ def alta(tabla, values):
     cursor = conn.cursor()
     
     if tabla == "bebe":
-        # Si 'id_bebe' es autoincrementable, no lo incluyas en los valores
+        # La ID es auto-incremental, no se incluye en los valores
         sql = "INSERT INTO bebe (nombre, apellidoPaterno, apellidoMaterno, fechaDeNacimiento, usuario_id_usuario) VALUES (%s, %s, %s, %s, %s)"
-        # Asegúrate de pasar 5 valores en lugar de 6, ya que 'id_bebe' es autoincrementable
         if len(values) != 5:
             messagebox.showerror("Error", "Debe proporcionar exactamente 5 valores para la tabla 'bebe'.")
             return
@@ -49,7 +48,6 @@ def baja(tabla, id_valor):
     conn = connect_db()
     cursor = conn.cursor()
 
-    # Aquí asegúrate de que el nombre de la columna en WHERE coincida con la estructura de tu base de datos
     if tabla == "registroTemperatura":
         sql = "DELETE FROM registroTemperatura WHERE id_registroTemp = %s"
     elif tabla == "registroHumedad":
@@ -57,11 +55,14 @@ def baja(tabla, id_valor):
     elif tabla == "bebe":
         sql = "DELETE FROM bebe WHERE id_bebe = %s"
 
-    cursor.execute(sql, (id_valor,))
-    conn.commit()
-    conn.close()
-    messagebox.showinfo("Operación Exitosa", "Registro eliminado con éxito")
-
+    try:
+        cursor.execute(sql, (id_valor,))
+        conn.commit()
+        messagebox.showinfo("Operación Exitosa", "Registro eliminado con éxito")
+    except Exception as e:
+        messagebox.showerror("Error", f"Se produjo un error al realizar la operación: {e}")
+    finally:
+        conn.close()
 
 def modificacion(tabla, id_valor, new_values):
     conn = connect_db()
@@ -70,16 +71,19 @@ def modificacion(tabla, id_valor, new_values):
     if tabla == "bebe":
         sql = "UPDATE bebe SET nombre = %s, apellidoPaterno = %s, apellidoMaterno = %s, fechaDeNacimiento = %s, usuario_id_usuario = %s WHERE id_bebe = %s"
     elif tabla == "registroTemperatura":
-        sql = "UPDATE registroTemperatura SET temperatura = %s, fecha = %s WHERE id_registroTemp = %s"
+        sql = "UPDATE registroTemperatura SET temperatura = %s, fecha = %s, cuna_id_cuna = %s WHERE id_registroTemp = %s"
     elif tabla == "registroHumedad":
-        sql = "UPDATE registroHumedad SET humedad = %s, fecha = %s WHERE id_registroHumedad = %s"
+        sql = "UPDATE registroHumedad SET humedad = %s, fecha = %s, cuna_id_cuna = %s WHERE id_registroHumedad = %s"
     
-    cursor.execute(sql, (*new_values, id_valor))
-    conn.commit()
-    conn.close()
-    messagebox.showinfo("Operación Exitosa", "Registro actualizado con éxito")
+    try:
+        cursor.execute(sql, (*new_values, id_valor))
+        conn.commit()
+        messagebox.showinfo("Operación Exitosa", "Registro actualizado con éxito")
+    except Exception as e:
+        messagebox.showerror("Error", f"Se produjo un error al realizar la operación: {e}")
+    finally:
+        conn.close()
 
-# Función para obtener los datos de un bebé por ID
 def obtener_datos_bebe(id_bebe):
     conn = connect_db()
     cursor = conn.cursor()
@@ -88,31 +92,36 @@ def obtener_datos_bebe(id_bebe):
     conn.close()
     return resultado
 
-# Función para obtener los datos de un registro de temperatura por ID
 def obtener_datos_registro_temperatura(id_registroTemp):
-    # Consulta actualizada con el nombre correcto de la columna
-    query = "SELECT temperatura, fecha, cuna_id_cuna FROM registroTemperatura WHERE id_registroTemp = %s"
-    
-    # Usar la función de conexión
     conn = connect_db()
     cursor = conn.cursor()
-    cursor.execute(query, (id_registroTemp,))
+    cursor.execute("SELECT temperatura, fecha, cuna_id_cuna FROM registroTemperatura WHERE id_registroTemp = %s", (id_registroTemp,))
     datos_temperatura = cursor.fetchone()
-    
-    if datos_temperatura:
-        return datos_temperatura
-    else:
-        return None
+    conn.close()
+    return datos_temperatura
 
+def obtener_datos_registro_humedad(id_registroHumedad):
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT humedad, fecha, cuna_id_cuna FROM registroHumedad WHERE id_registroHumedad = %s", (id_registroHumedad,))
+    datos_humedad = cursor.fetchone()
+    conn.close()
+    return datos_humedad
 
-
-# Interfaz para cada tabla
+# Código para la interfaz de la tabla `registroTemperatura` y `registroHumedad`
 def tabla_interfaz(tabla):
     def ejecutar_operacion():
         operacion = operacion_var.get()
         
         if operacion == "Alta":
-            values = tuple(entry_var.get() for entry_var in entry_vars)
+            # Recolectamos los valores de las entradas según la tabla seleccionada
+            if tabla == "bebe":
+                values = (nombre_entry.get(), apellidoP_entry.get(), apellidoM_entry.get(), fechaNacimiento_entry.get(), id_usuario_entry.get())
+            elif tabla == "registroTemperatura":
+                values = (temperatura_entry.get(), fecha_entry.get(), cuna_id_entry.get())
+            elif tabla == "registroHumedad":
+                values = (humedad_entry.get(), fecha_entry.get(), cuna_id_entry.get())
+            
             alta(tabla, values)
             
         elif operacion == "Baja":
@@ -123,9 +132,9 @@ def tabla_interfaz(tabla):
             if tabla == "bebe":
                 new_values = (nombre_entry.get(), apellidoP_entry.get(), apellidoM_entry.get(), fechaNacimiento_entry.get(), id_usuario_entry.get())
             elif tabla == "registroTemperatura":
-                new_values = (temperatura_entry.get(), fecha_entry.get())
+                new_values = (temperatura_entry.get(), fecha_entry.get(), cuna_id_entry.get())
             elif tabla == "registroHumedad":
-                new_values = (humedad_entry.get(), fecha_entry.get())
+                new_values = (humedad_entry.get(), fecha_entry.get(), cuna_id_entry.get())
             modificacion(tabla, id_valor, new_values)
 
     def autocompletar_campos():
@@ -140,6 +149,17 @@ def tabla_interfaz(tabla):
                     fecha_entry.insert(0, datos_temperatura[1])
                     cuna_id_entry.delete(0, END)
                     cuna_id_entry.insert(0, datos_temperatura[2])
+                else:
+                    messagebox.showwarning("No Encontrado", "No se encontraron datos para ese ID")
+            elif tabla == "registroHumedad":
+                datos_humedad = obtener_datos_registro_humedad(id_valor)
+                if datos_humedad:
+                    humedad_entry.delete(0, END)
+                    humedad_entry.insert(0, datos_humedad[0])
+                    fecha_entry.delete(0, END)
+                    fecha_entry.insert(0, datos_humedad[1])
+                    cuna_id_entry.delete(0, END)
+                    cuna_id_entry.insert(0, datos_humedad[2])
                 else:
                     messagebox.showwarning("No Encontrado", "No se encontraron datos para ese ID")
             elif tabla == "bebe":
@@ -158,7 +178,6 @@ def tabla_interfaz(tabla):
                 else:
                     messagebox.showwarning("No Encontrado", "No se encontraron datos para ese ID")
 
-    # Crear una nueva ventana para la tabla seleccionada
     ventana = Toplevel()
     ventana.title(f"Operaciones ABM para la tabla {tabla}")
     ventana.geometry("500x600")
@@ -167,19 +186,23 @@ def tabla_interfaz(tabla):
     main_frame.pack(expand=True, fill=BOTH)
 
     operacion_var = StringVar(value="Alta")
-    entry_vars = [StringVar() for _ in range(5)]
 
+    # Configuramos las entradas para cada tabla de acuerdo con el número de campos esperados
+    if tabla == "bebe":
+        entry_vars = [StringVar() for _ in range(5)]
+    else:
+        entry_vars = [StringVar() for _ in range(3)]
+    
     ttk.Label(main_frame, text="Operación:", font=("Arial", 12, "bold")).grid(row=0, column=0, sticky=W, pady=5)
     operacion_combo = ttk.Combobox(main_frame, textvariable=operacion_var, values=["Alta", "Baja", "Modificación"], state="readonly")
     operacion_combo.grid(row=0, column=1, padx=10)
 
-    # Campos específicos por tabla
+    # Creamos el formulario según la tabla seleccionada
     if tabla == "bebe":
         ttk.Label(main_frame, text="ID (para Baja y Modificación):").grid(row=1, column=0, sticky=W, pady=5)
         id_entry = ttk.Entry(main_frame)
         id_entry.grid(row=1, column=1, padx=10)
-        
-        # Botón para autocompletar
+
         autocompletar_btn = ttk.Button(main_frame, text="Autocompletar", command=autocompletar_campos, style='info.TButton')
         autocompletar_btn.grid(row=1, column=2, padx=10)
 
@@ -195,55 +218,79 @@ def tabla_interfaz(tabla):
         apellidoM_entry = ttk.Entry(main_frame, textvariable=entry_vars[2])
         apellidoM_entry.grid(row=4, column=1, padx=10)
 
-        ttk.Label(main_frame, text="Fecha de Nacimiento (YYYY-MM-DD)").grid(row=5, column=0, sticky=W, pady=5)
+        ttk.Label(main_frame, text="Fecha de Nacimiento").grid(row=5, column=0, sticky=W, pady=5)
         fechaNacimiento_entry = ttk.Entry(main_frame, textvariable=entry_vars[3])
         fechaNacimiento_entry.grid(row=5, column=1, padx=10)
 
         ttk.Label(main_frame, text="ID Usuario").grid(row=6, column=0, sticky=W, pady=5)
         id_usuario_entry = ttk.Entry(main_frame, textvariable=entry_vars[4])
         id_usuario_entry.grid(row=6, column=1, padx=10)
-
+    
     elif tabla == "registroTemperatura":
         ttk.Label(main_frame, text="ID (para Baja y Modificación):").grid(row=1, column=0, sticky=W, pady=5)
         id_entry = ttk.Entry(main_frame)
         id_entry.grid(row=1, column=1, padx=10)
-        
-        # Botón para autocompletar
+
         autocompletar_btn = ttk.Button(main_frame, text="Autocompletar", command=autocompletar_campos, style='info.TButton')
         autocompletar_btn.grid(row=1, column=2, padx=10)
 
         ttk.Label(main_frame, text="Temperatura").grid(row=2, column=0, sticky=W, pady=5)
-        temperatura_entry = ttk.Entry(main_frame, textvariable=entry_vars[0])
+        temperatura_entry = ttk.Entry(main_frame)
         temperatura_entry.grid(row=2, column=1, padx=10)
 
         ttk.Label(main_frame, text="Fecha").grid(row=3, column=0, sticky=W, pady=5)
-        fecha_entry = ttk.Entry(main_frame, textvariable=entry_vars[1])
+        fecha_entry = ttk.Entry(main_frame)
         fecha_entry.grid(row=3, column=1, padx=10)
 
-        # Nuevo campo para cuna_id_cuna
-        ttk.Label(main_frame, text="Cuna ID").grid(row=4, column=0, sticky=W, pady=5)
-        cuna_id_entry = ttk.Entry(main_frame, textvariable=entry_vars[2])
+        ttk.Label(main_frame, text="ID Cuna").grid(row=4, column=0, sticky=W, pady=5)
+        cuna_id_entry = ttk.Entry(main_frame)
+        cuna_id_entry.grid(row=4, column=1, padx=10)
+        
+    elif tabla == "registroHumedad":
+        ttk.Label(main_frame, text="ID (para Baja y Modificación):").grid(row=1, column=0, sticky=W, pady=5)
+        id_entry = ttk.Entry(main_frame)
+        id_entry.grid(row=1, column=1, padx=10)
+
+        autocompletar_btn = ttk.Button(main_frame, text="Autocompletar", command=autocompletar_campos, style='info.TButton')
+        autocompletar_btn.grid(row=1, column=2, padx=10)
+
+        ttk.Label(main_frame, text="Humedad").grid(row=2, column=0, sticky=W, pady=5)
+        humedad_entry = ttk.Entry(main_frame)
+        humedad_entry.grid(row=2, column=1, padx=10)
+
+        ttk.Label(main_frame, text="Fecha").grid(row=3, column=0, sticky=W, pady=5)
+        fecha_entry = ttk.Entry(main_frame)
+        fecha_entry.grid(row=3, column=1, padx=10)
+
+        ttk.Label(main_frame, text="ID Cuna").grid(row=4, column=0, sticky=W, pady=5)
+        cuna_id_entry = ttk.Entry(main_frame)
         cuna_id_entry.grid(row=4, column=1, padx=10)
 
-    # Botón para ejecutar la operación
-    ejecutar_btn = ttk.Button(main_frame, text="Ejecutar Operación", command=ejecutar_operacion)
-    ejecutar_btn.grid(row=7, columnspan=3, pady=10)
+    ejecutar_btn = ttk.Button(main_frame, text="Ejecutar", command=ejecutar_operacion, style='primary.TButton')
+    ejecutar_btn.grid(row=10, column=1, pady=20)
 
-    ventana.mainloop()
+def abrir_pantalla_principal():
+    ventana_principal = Tk()
+    ventana_principal.title("Cuna Inteligente - ABM")
+    ventana_principal.geometry("400x300")
 
-# Función principal para la ventana principal
-def ventana_principal():
-    ventana = Tk()
-    ventana.title("Gestión de Base de Datos Cuna Inteligente")
-    ventana.geometry("400x400")
+    style = Style()
+    style.theme_use('minty')
 
-    ttk.Button(ventana, text="Gestión de Bebé", command=lambda: tabla_interfaz("bebe")).pack(pady=20)
-    ttk.Button(ventana, text="Gestión de Temperaturas", command=lambda: tabla_interfaz("registroTemperatura")).pack(pady=20)
-    ttk.Button(ventana, text="Gestión de Humedad", command=lambda: tabla_interfaz("registroHumedad")).pack(pady=20)
+    main_frame = ttk.Frame(ventana_principal, padding=20)
+    main_frame.pack(expand=True, fill=BOTH)
 
-    ventana.mainloop()
+    ttk.Label(main_frame, text="Gestión de la Cuna Inteligente", font=("Arial", 16, "bold")).pack(pady=10)
+    
+    bebe_btn = ttk.Button(main_frame, text="Gestión de Bebé", command=lambda: tabla_interfaz("bebe"), style='primary.TButton')
+    bebe_btn.pack(fill=BOTH, pady=5)
 
-# Iniciar la aplicación
-ventana_principal()
+    temp_btn = ttk.Button(main_frame, text="Registro de Temperatura", command=lambda: tabla_interfaz("registroTemperatura"), style='primary.TButton')
+    temp_btn.pack(fill=BOTH, pady=5)
 
+    humedad_btn = ttk.Button(main_frame, text="Registro de Humedad", command=lambda: tabla_interfaz("registroHumedad"), style='primary.TButton')
+    humedad_btn.pack(fill=BOTH, pady=5)
 
+    ventana_principal.mainloop()
+
+abrir_pantalla_principal()
