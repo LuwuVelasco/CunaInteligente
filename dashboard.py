@@ -66,7 +66,6 @@ def registrar_usuario(nombre, apellido_p, apellido_m, username, gmail, password)
     return False
 
 # Ventana de registro de usuario
-# Ventana de registro de usuario
 def ventana_registro():
     def registrar():
         nombre = entry_nombre.get()
@@ -84,49 +83,59 @@ def ventana_registro():
 
     ventana_registro = tk.Toplevel()
     ventana_registro.title("Registro de Usuario")
-    ventana_registro.geometry("400x400")
+    ventana_registro.geometry("400x360")
     ventana_registro.configure(bg="#f0f0f0")
 
     # Centrar ventana
     ancho_ventana = 400
-    alto_ventana = 400
+    alto_ventana = 360
     ancho_pantalla = ventana_registro.winfo_screenwidth()
     alto_pantalla = ventana_registro.winfo_screenheight()
     x_ventana = (ancho_pantalla // 2) - (ancho_ventana // 2)
     y_ventana = (alto_pantalla // 2) - (alto_ventana // 2)
     ventana_registro.geometry(f"{ancho_ventana}x{alto_ventana}+{x_ventana}+{y_ventana}")
+    
+    # Cargar imagen de fondo
+    imagen_fondo = Image.open("FONDO_DASH.jpg")  # Reemplaza con la ruta de tu imagen
+    imagen_fondo = imagen_fondo.resize((400, 360), Image.LANCZOS)  # Ajusta el tamaño de la imagen
+    fondo = ImageTk.PhotoImage(imagen_fondo)
+    
+    label_fondo = tk.Label(ventana_registro, image=fondo)
+    label_fondo.place(x=0, y=0, relwidth=1, relheight=1)
+    label_fondo.image = fondo  # Referencia para evitar que se elimine la imagen
 
-    header = ttk.Label(ventana_registro, text="Registro de Usuario", font=("Arial", 16, "bold"), background="#f0f0f0")
-    header.pack(pady=(10, 20))
+    # Contenedor central
+    frame_central = ttk.Frame(ventana_registro, padding=20)
+    frame_central.pack(expand=True)
 
-    form_frame = ttk.Frame(ventana_registro, padding=20)
-    form_frame.pack(fill='both', expand=True)
+    header = ttk.Label(frame_central, text="Registro de Usuario", font=("Arial", 16, "bold"), background="")
+    header.grid(row=0, column=0, columnspan=2, pady=(10, 20))
 
-    ttk.Label(form_frame, text="Nombre:").grid(row=0, column=0, sticky="w", pady=5)
-    entry_nombre = ttk.Entry(form_frame, width=30)
-    entry_nombre.grid(row=0, column=1, pady=5)
+    ttk.Label(frame_central, text="Nombre:").grid(row=1, column=0, sticky="e", pady=5)
+    entry_nombre = ttk.Entry(frame_central, width=30)
+    entry_nombre.grid(row=1, column=1, pady=5)
 
-    ttk.Label(form_frame, text="Apellido Paterno:").grid(row=1, column=0, sticky="w", pady=5)
-    entry_apellido_p = ttk.Entry(form_frame, width=30)
-    entry_apellido_p.grid(row=1, column=1, pady=5)
+    ttk.Label(frame_central, text="Apellido Paterno:").grid(row=2, column=0, sticky="e", pady=5)
+    entry_apellido_p = ttk.Entry(frame_central, width=30)
+    entry_apellido_p.grid(row=2, column=1, pady=5)
 
-    ttk.Label(form_frame, text="Apellido Materno:").grid(row=2, column=0, sticky="w", pady=5)
-    entry_apellido_m = ttk.Entry(form_frame, width=30)
-    entry_apellido_m.grid(row=2, column=1, pady=5)
+    ttk.Label(frame_central, text="Apellido Materno:").grid(row=3, column=0, sticky="e", pady=5)
+    entry_apellido_m = ttk.Entry(frame_central, width=30)
+    entry_apellido_m.grid(row=3, column=1, pady=5)
 
-    ttk.Label(form_frame, text="Usuario:").grid(row=3, column=0, sticky="w", pady=5)
-    entry_username = ttk.Entry(form_frame, width=30)
-    entry_username.grid(row=3, column=1, pady=5)
+    ttk.Label(frame_central, text="Usuario:").grid(row=4, column=0, sticky="e", pady=5)
+    entry_username = ttk.Entry(frame_central, width=30)
+    entry_username.grid(row=4, column=1, pady=5)
 
-    ttk.Label(form_frame, text="Correo Gmail:").grid(row=4, column=0, sticky="w", pady=5)
-    entry_gmail = ttk.Entry(form_frame, width=30)
-    entry_gmail.grid(row=4, column=1, pady=5)
+    ttk.Label(frame_central, text="Correo Gmail:").grid(row=5, column=0, sticky="e", pady=5)
+    entry_gmail = ttk.Entry(frame_central, width=30)
+    entry_gmail.grid(row=5, column=1, pady=5)
 
-    ttk.Label(form_frame, text="Contraseña:").grid(row=5, column=0, sticky="w", pady=5)
-    entry_password = ttk.Entry(form_frame, show="*", width=30)
-    entry_password.grid(row=5, column=1, pady=5)
+    ttk.Label(frame_central, text="Contraseña:").grid(row=6, column=0, sticky="e", pady=5)
+    entry_password = ttk.Entry(frame_central, show="*", width=30)
+    entry_password.grid(row=6, column=1, pady=5)
 
-    ttk.Button(ventana_registro, text="Registrar", command=registrar).pack(pady=20)
+    ttk.Button(frame_central, text="Registrar", command=registrar).grid(row=7, column=0, columnspan=2, pady=20)
 
 # Ventana de inicio de sesión
 def ventana_inicio():
@@ -141,38 +150,47 @@ def ventana_inicio():
 
     ventana = tk.Tk()
     ventana.title("Inicio de Sesión")
-    ventana.geometry("400x300")
+    ventana.geometry("400x360")
     ventana.configure(bg="#f0f0f0")
 
-    # Centrar ventana
+    # Centrar ventana en la pantalla
     ancho_ventana = 400
-    alto_ventana = 300
+    alto_ventana = 360
     ancho_pantalla = ventana.winfo_screenwidth()
     alto_pantalla = ventana.winfo_screenheight()
     x_ventana = (ancho_pantalla // 2) - (ancho_ventana // 2)
     y_ventana = (alto_pantalla // 2) - (alto_ventana // 2)
     ventana.geometry(f"{ancho_ventana}x{alto_ventana}+{x_ventana}+{y_ventana}")
-
-    style = ttk.Style()
-    style.configure("TButton", font=("Arial", 12), padding=10)
-    style.configure("TEntry", font=("Arial", 12))
     
-    header = ttk.Label(ventana, text="Bienvenido", font=("Arial", 18, "bold"), background="#f0f0f0")
+    # Cargar imagen de fondo
+    imagen_fondo = Image.open("FONDO_DASH.jpg")  # Reemplaza con la ruta de tu imagen
+    imagen_fondo = imagen_fondo.resize((400, 360), Image.LANCZOS)  # Ajusta el tamaño de la imagen
+    fondo = ImageTk.PhotoImage(imagen_fondo)
+    
+    label_fondo = tk.Label(ventana, image=fondo)
+    label_fondo.place(x=0, y=0, relwidth=1, relheight=1)
+
+    # Crear un marco para centrar los elementos
+    container = tk.Frame(ventana, bg="#f0f0f0")
+    container.pack(expand=True)  # Expandir y centrar el marco
+
+    # Añadir los componentes en el marco container
+    header = ttk.Label(container, text="Bienvenido", font=("Arial", 18, "bold"), background="#f0f0f0")
     header.pack(pady=(20, 10))
 
-    user_frame = ttk.Frame(ventana)
+    user_frame = ttk.Frame(container)
     user_frame.pack(pady=(5, 10))
     ttk.Label(user_frame, text="Usuario:", font=("Arial", 12)).grid(row=0, column=0, sticky="e", padx=5)
     entry_user = ttk.Entry(user_frame, width=25)
     entry_user.grid(row=0, column=1)
 
-    pass_frame = ttk.Frame(ventana)
+    pass_frame = ttk.Frame(container)
     pass_frame.pack(pady=(5, 10))
     ttk.Label(pass_frame, text="Contraseña:", font=("Arial", 12)).grid(row=0, column=0, sticky="e", padx=5)
     entry_pass = ttk.Entry(pass_frame, show="*", width=25)
     entry_pass.grid(row=0, column=1)
 
-    btn_frame = ttk.Frame(ventana)
+    btn_frame = ttk.Frame(container)
     btn_frame.pack(pady=20)
     ttk.Button(btn_frame, text="Ingresar", command=login).grid(row=0, column=0, padx=5)
     ttk.Button(btn_frame, text="Registrarse", command=ventana_registro).grid(row=0, column=1, padx=5)
@@ -197,73 +215,94 @@ def seleccionar_bebe():
                 boton_bebe = ttk.Button(frame_bebes, text=f"{nombre} {apellidoPaterno}", command=iniciar_dashboard)
                 boton_bebe.pack(fill='x', pady=5)
 
+    # Ventana para agregar un bebé
     def agregar_bebe():
-        def registrar_nuevo_bebe():
+        def guardar_bebe():
             nombre = entry_nombre.get()
-            apellido_p = entry_apellido_p.get()
-            apellido_m = entry_apellido_m.get()
-            fecha_nac = entry_fecha_nac.get()
+            apellido = entry_apellido.get()
+            fecha_nacimiento = entry_fecha_nacimiento.get()
 
-            conexion = conectar_bd()
-            if conexion:
-                cursor = conexion.cursor()
-                cursor.execute(
-                    "INSERT INTO bebe (nombre, apellidoPaterno, apellidoMaterno, fechaNacimiento, usuario_id_usuario) VALUES (%s, %s, %s, %s, %s)",
-                    (nombre, apellido_p, apellido_m, fecha_nac, id_usuario)
-                )
-                conexion.commit()
-                conexion.close()
-                messagebox.showinfo("Éxito", "Bebé registrado exitosamente")
-                ventana_agregar_bebe.destroy()
-                cargar_bebes()
+            if nombre and apellido and fecha_nacimiento:
+                conexion = conectar_bd()
+                if conexion:
+                    cursor = conexion.cursor()
+                    cursor.execute("INSERT INTO bebe (nombre, apellido, fecha_nacimiento) VALUES (%s, %s, %s)",
+                                   (nombre, apellido, fecha_nacimiento))
+                    conexion.commit()
+                    conexion.close()
+                    messagebox.showinfo("Éxito", "Bebé agregado exitosamente")
+                    ventana_agregar_bebe.destroy()
+                else:
+                    messagebox.showerror("Error", "No se pudo agregar al bebé")
             else:
-                messagebox.showerror("Error", "No se pudo registrar el bebé")
+                messagebox.showwarning("Advertencia", "Por favor, completa todos los campos")
 
         ventana_agregar_bebe = tk.Toplevel()
         ventana_agregar_bebe.title("Agregar Bebé")
-        ventana_agregar_bebe.geometry("350x250")
+        ventana_agregar_bebe.geometry("400x360")
         ventana_agregar_bebe.configure(bg="#f0f0f0")
 
         # Centrar ventana
-        ancho_ventana = 350
-        alto_ventana = 250
+        ancho_ventana = 400
+        alto_ventana = 360
         ancho_pantalla = ventana_agregar_bebe.winfo_screenwidth()
         alto_pantalla = ventana_agregar_bebe.winfo_screenheight()
         x_ventana = (ancho_pantalla // 2) - (ancho_ventana // 2)
         y_ventana = (alto_pantalla // 2) - (alto_ventana // 2)
         ventana_agregar_bebe.geometry(f"{ancho_ventana}x{alto_ventana}+{x_ventana}+{y_ventana}")
+        
+        # Cargar imagen de fondo
+        imagen_fondo = Image.open("FONDO_DASH.jpg")  # Reemplaza con la ruta de tu imagen
+        imagen_fondo = imagen_fondo.resize((400, 360), Image.LANCZOS)  # Ajusta el tamaño de la imagen
+        fondo = ImageTk.PhotoImage(imagen_fondo)
+        
+        label_fondo = tk.Label(ventana_agregar_bebe, image=fondo)
+        label_fondo.place(x=0, y=0, relwidth=1, relheight=1)
+        label_fondo.image = fondo
+        
+        # Contenedor central
+        frame_central = ttk.Frame(ventana_agregar_bebe, padding=20)
+        frame_central.pack(expand=True)
 
-        ttk.Label(ventana_agregar_bebe, text="Nombre:").pack(pady=5)
-        entry_nombre = ttk.Entry(ventana_agregar_bebe)
-        entry_nombre.pack()
+        header = ttk.Label(frame_central, text="Agregar Bebé", font=("Arial", 16, "bold"), background="#f0f0f0")
+        header.grid(row=0, column=0, columnspan=2, pady=(10, 20))
 
-        ttk.Label(ventana_agregar_bebe, text="Apellido Paterno:").pack(pady=5)
-        entry_apellido_p = ttk.Entry(ventana_agregar_bebe)
-        entry_apellido_p.pack()
+        ttk.Label(frame_central, text="Nombre:", font=("Arial", 12)).grid(row=1, column=0, sticky="e", pady=5)
+        entry_nombre = ttk.Entry(frame_central, width=25)
+        entry_nombre.grid(row=1, column=1, pady=5)
 
-        ttk.Label(ventana_agregar_bebe, text="Apellido Materno:").pack(pady=5)
-        entry_apellido_m = ttk.Entry(ventana_agregar_bebe)
-        entry_apellido_m.pack()
+        ttk.Label(frame_central, text="Apellido:", font=("Arial", 12)).grid(row=2, column=0, sticky="e", pady=5)
+        entry_apellido = ttk.Entry(frame_central, width=25)
+        entry_apellido.grid(row=2, column=1, pady=5)
 
-        ttk.Label(ventana_agregar_bebe, text="Fecha de Nacimiento (AAAA-MM-DD):").pack(pady=5)
-        entry_fecha_nac = ttk.Entry(ventana_agregar_bebe)
-        entry_fecha_nac.pack()
+        ttk.Label(frame_central, text="Nacimiento\n(AAAA-MM-DD):", font=("Arial", 12)).grid(row=3, column=0, sticky="e", pady=5)
+        entry_fecha_nacimiento = ttk.Entry(frame_central, width=25)
+        entry_fecha_nacimiento.grid(row=3, column=1, pady=5)
 
-        ttk.Button(ventana_agregar_bebe, text="Registrar Bebé", command=registrar_nuevo_bebe).pack(pady=10)
+        ttk.Button(frame_central, text="Guardar", command=guardar_bebe).grid(row=4, column=0, columnspan=2, pady=20)
 
     ventana_bebe = tk.Toplevel()
     ventana_bebe.title("Seleccionar Bebé")
-    ventana_bebe.geometry("400x300")
+    ventana_bebe.geometry("400x360")
     ventana_bebe.configure(bg="#f0f0f0")
 
     # Centrar ventana
     ancho_ventana = 400
-    alto_ventana = 300
+    alto_ventana = 360
     ancho_pantalla = ventana_bebe.winfo_screenwidth()
     alto_pantalla = ventana_bebe.winfo_screenheight()
     x_ventana = (ancho_pantalla // 2) - (ancho_ventana // 2)
     y_ventana = (alto_pantalla // 2) - (alto_ventana // 2)
     ventana_bebe.geometry(f"{ancho_ventana}x{alto_ventana}+{x_ventana}+{y_ventana}")
+    
+    # Cargar imagen de fondo en ventana de seleccionar bebé
+    imagen_fondo = Image.open("FONDO_DASH.jpg")
+    imagen_fondo = imagen_fondo.resize((400, 360), Image.LANCZOS)
+    fondo = ImageTk.PhotoImage(imagen_fondo)
+    
+    label_fondo = tk.Label(ventana_bebe, image=fondo)
+    label_fondo.place(x=0, y=0, relwidth=1, relheight=1)
+    label_fondo.image = fondo
 
     header = ttk.Label(ventana_bebe, text="Seleccionar Bebé", font=("Arial", 16, "bold"), background="#f0f0f0")
     header.pack(pady=10)
@@ -285,6 +324,15 @@ def iniciar_dashboard():
     # Contenedor principal con canvas para permitir scroll
     canvas = tk.Canvas(ventana_dashboard)
     canvas.pack(side="left", fill="both", expand=True)
+    
+    # Cargar imagen de fondo en el dashboard
+    imagen_fondo = Image.open("FONDO_DASH.jpg")
+    imagen_fondo = imagen_fondo.resize((1500, 800), Image.LANCZOS)
+    fondo = ImageTk.PhotoImage(imagen_fondo)
+    
+    label_fondo = tk.Label(canvas, image=fondo)
+    label_fondo.place(x=0, y=0, relwidth=1, relheight=1)
+    label_fondo.image = fondo
 
     # Scrollbar para el canvas
     scrollbar = ttk.Scrollbar(ventana_dashboard, orient="vertical", command=canvas.yview)
@@ -293,7 +341,8 @@ def iniciar_dashboard():
 
     # Crear un frame dentro del canvas
     dashboard_frame = ttk.Frame(canvas)
-    canvas.create_window((0, 0), window=dashboard_frame, anchor="nw")
+    dashboard_frame.pack(anchor="center")
+    canvas.create_window((250, 0), window=dashboard_frame, anchor="nw")
 
     # Configurar el frame para actualizar el tamaño del canvas
     def ajustar_canvas(event):
@@ -301,23 +350,41 @@ def iniciar_dashboard():
 
     dashboard_frame.bind("<Configure>", ajustar_canvas)
 
-    # Contadores para valores actuales
-    temp_val_label = ttk.Label(dashboard_frame, text="Temperatura Actual: N/A", font=("Arial", 12, "bold"))
-    temp_val_label.pack(pady=5)
+    # Crear tarjetas para los contadores e indicadores
+    frame_tarjetas = ttk.Frame(dashboard_frame)
+    frame_tarjetas.pack(pady=10, anchor="center")
 
-    hum_val_label = ttk.Label(dashboard_frame, text="Humedad Actual: N/A", font=("Arial", 12, "bold"))
-    hum_val_label.pack(pady=5)
+    # Tarjeta de Temperatura
+    temp_frame = tk.Frame(frame_tarjetas, bg="white", bd=2, relief="groove", padx=10, pady=5)
+    temp_frame.grid(row=0, column=0, padx=10, pady=10)
+    temp_val_label = tk.Label(temp_frame, text="Temperatura Actual: N/A", font=("Arial", 12, "bold"), bg="white")
+    temp_val_label.pack()
+    temp_status_label = tk.Label(temp_frame, text="Condición de Temperatura: N/A", font=("Arial", 10), bg="white")
+    temp_status_label.pack()
 
-    # Indicadores de seguridad
-    temp_status_label = ttk.Label(dashboard_frame, text="Condición de Temperatura: N/A", font=("Arial", 12, "bold"))
-    temp_status_label.pack(pady=5)
-
-    hum_status_label = ttk.Label(dashboard_frame, text="Condición de Humedad: N/A", font=("Arial", 12, "bold"))
-    hum_status_label.pack(pady=5)
+    # Tarjeta de Humedad
+    hum_frame = tk.Frame(frame_tarjetas, bg="white", bd=2, relief="groove", padx=10, pady=5)
+    hum_frame.grid(row=0, column=1, padx=10, pady=10)
+    hum_val_label = tk.Label(hum_frame, text="Humedad Actual: N/A", font=("Arial", 12, "bold"), bg="white")
+    hum_val_label.pack()
+    hum_status_label = tk.Label(hum_frame, text="Condición de Humedad: N/A", font=("Arial", 10), bg="white")
+    hum_status_label.pack()
+    
+    # Función para actualizar el color del estado
+    def actualizar_estado_label(framel, label, main_label, texto, seguro):
+        label.config(text=texto)
+        if seguro:
+            framel.config(background="#00bb2d")
+            label.config(background="#00bb2d", foreground="white")  # Verde para seguro
+            main_label.config(background="#00bb2d", foreground="white")
+        else:
+            framel.config(background="#b81414")
+            label.config(background="#b81414", foreground="white")  # Rojo para inseguro
+            main_label.config(background="#b81414", foreground="white")
 
     # Entrada para definir el número de registros
     filtro_frame = ttk.Frame(dashboard_frame)
-    filtro_frame.pack(pady=10)
+    filtro_frame.pack(pady=10, anchor="center")
     ttk.Label(filtro_frame, text="Número de registros recientes:").grid(row=0, column=0, padx=5)
     entry_limite = ttk.Entry(filtro_frame, width=5)
     entry_limite.grid(row=0, column=1, padx=5)
@@ -325,25 +392,29 @@ def iniciar_dashboard():
 
     # Contenido del dashboard
     frame_graficos = tk.Frame(dashboard_frame)
-    frame_graficos.pack(pady=20)
+    frame_graficos.pack(pady=20, anchor="center")
 
     temp_img_label = tk.Label(frame_graficos)
     temp_img_label.grid(row=0, column=0, padx=20)
 
     hum_img_label = tk.Label(frame_graficos)
     hum_img_label.grid(row=0, column=1, padx=20)
-
-    # Tabla de datos de temperatura
-    temp_table = ttk.Treeview(dashboard_frame, columns=("Fecha", "Temperatura"), show="headings")
+    
+    # Frame para tablas
+    frame_tablas = tk.Frame(dashboard_frame)
+    frame_tablas.pack(pady=10, anchor="center")
+    
+    # Tabla de datos de temperatura (posición izquierda)
+    temp_table = ttk.Treeview(frame_tablas, columns=("Fecha", "Temperatura"), show="headings")
     temp_table.heading("Fecha", text="Fecha")
     temp_table.heading("Temperatura", text="Temperatura (°C)")
-    temp_table.pack(pady=10, fill="x")
+    temp_table.grid(row=0, column=0, padx=10)  # Usa grid y coloca en la columna 0
 
-    # Tabla de datos de humedad
-    hum_table = ttk.Treeview(dashboard_frame, columns=("Fecha", "Humedad"), show="headings")
+    # Tabla de datos de humedad (posición derecha)
+    hum_table = ttk.Treeview(frame_tablas, columns=("Fecha", "Humedad"), show="headings")
     hum_table.heading("Fecha", text="Fecha")
     hum_table.heading("Humedad", text="Humedad (%)")
-    hum_table.pack(pady=10, fill="x")
+    hum_table.grid(row=0, column=1, padx=10)  # Coloca en la columna 1, misma fila
 
     # Cola para manejar los datos de actualización desde el hilo secundario
     update_queue = Queue()
@@ -357,20 +428,50 @@ def iniciar_dashboard():
 
     ventana_dashboard.protocol("WM_DELETE_WINDOW", on_closing)
 
-    # Función para obtener y actualizar gráficos y tablas en el hilo secundario
+    # Función para obtener el número de registros en una tabla
+    def contar_registros(tabla):
+        conexion = conectar_bd()
+        if conexion:
+            cursor = conexion.cursor()
+            cursor.execute(f"SELECT COUNT(*) FROM {tabla}")
+            count = cursor.fetchone()[0]
+            conexion.close()
+            return count
+        return 0
+
+    # Función de actualización de gráficos y tablas con verificación de límite
     def obtener_datos_graficos():
         while actualizar:
-            limite = int(entry_limite.get())  # Leer el valor del límite de registros
-            temperaturas = obtener_datos(f"SELECT fecha, temperatura FROM registroTemperatura ORDER BY fecha DESC LIMIT {limite}")
-            humedades = obtener_datos(f"SELECT fecha, humedad FROM registroHumedad ORDER BY fecha DESC LIMIT {limite}")
+            try:
+                limite = int(entry_limite.get())  # Leer el valor del límite de registros
+                
+                # Verificar el número de registros disponibles en cada tabla
+                total_temp = contar_registros("registroTemperatura")
+                total_hum = contar_registros("registroHumedad")
+                
+                # Comprobar si el límite excede el total de registros disponibles
+                if limite > total_temp or limite > total_hum:
+                    messagebox.showwarning("Advertencia", "Solicitó más datos de los que hay en temperatura o humedad. Volviendo al límite de 10.")
+                    limite = 10
+                    entry_limite.delete(0, tk.END)
+                    entry_limite.insert(0, "10")
+                
+                # Obtener los datos con el límite ajustado
+                temperaturas = obtener_datos(f"SELECT fecha, temperatura FROM registroTemperatura ORDER BY fecha DESC LIMIT {limite}")
+                humedades = obtener_datos(f"SELECT fecha, humedad FROM registroHumedad ORDER BY fecha DESC LIMIT {limite}")
 
-            if temperaturas and humedades:
-                fechas_temp, temp_vals = zip(*temperaturas)
-                fechas_hum, hum_vals = zip(*humedades)
+                if temperaturas and humedades:
+                    fechas_temp, temp_vals = zip(*temperaturas)
+                    fechas_hum, hum_vals = zip(*humedades)
 
-                update_queue.put((fechas_temp, temp_vals, fechas_hum, hum_vals, temperaturas, humedades))
+                    update_queue.put((fechas_temp, temp_vals, fechas_hum, hum_vals, temperaturas, humedades))
 
-            time.sleep(5)
+                time.sleep(5)
+
+            except ValueError:
+                messagebox.showerror("Error", "El número de registros debe ser un valor numérico.")
+                entry_limite.delete(0, tk.END)
+                entry_limite.insert(0, "10")
 
     # Función de actualización en el hilo principal
     def actualizar_dashboard():
@@ -382,8 +483,8 @@ def iniciar_dashboard():
             hum_val_label.config(text=f"Humedad Actual: {hum_vals[0]} %")
 
             # Indicadores de condiciones seguras
-            temp_status_label.config(text="Condición de Temperatura: Segura" if 20 <= temp_vals[0] <= 30 else "Condición de Temperatura: Insegura")
-            hum_status_label.config(text="Condición de Humedad: Segura" if 40 <= hum_vals[0] <= 60 else "Condición de Humedad: Insegura")
+            actualizar_estado_label(temp_frame, temp_status_label, temp_val_label, "Condición de Temperatura: Segura" if 20 <= temp_vals[0] <= 30 else "Condición de Temperatura: Insegura", 20 <= temp_vals[0] <= 30)
+            actualizar_estado_label(hum_frame, hum_status_label, hum_val_label, "Condición de Humedad: Segura" if 40 <= hum_vals[0] <= 60 else "Condición de Humedad: Insegura", 40 <= hum_vals[0] <= 60)
 
             # Actualizar tabla de temperatura
             temp_table.delete(*temp_table.get_children())
@@ -396,13 +497,15 @@ def iniciar_dashboard():
                 hum_table.insert("", "end", values=(fecha, hum))
 
             # Gráfico de temperatura
-            plt.figure(figsize=(4, 5))
+            plt.figure(figsize=(4, 4))
             plt.plot(fechas_temp, temp_vals, color='red', marker='o')
-            plt.title("Temperatura (Últimos registros)")
+            plt.title("Registros Temperatura")
             plt.xlabel("Fecha")
             plt.xticks(rotation=90)
             plt.ylabel("Temperatura (°C)")
             plt.grid(True)
+            plt.tight_layout()  # Ajusta el layout para evitar recortes
+            plt.gcf().autofmt_xdate()  # Ajuste automático de fechas
             temp_buf = io.BytesIO()
             plt.savefig(temp_buf, format="png")
             temp_buf.seek(0)
@@ -413,13 +516,15 @@ def iniciar_dashboard():
             plt.close()
 
             # Gráfico de humedad
-            plt.figure(figsize=(4, 5))
+            plt.figure(figsize=(4, 4))
             plt.plot(fechas_hum, hum_vals, color='blue', marker='o')
-            plt.title("Humedad (Últimos registros)")
+            plt.title("Registros Humedad")
             plt.xlabel("Fecha")
             plt.xticks(rotation=90)
             plt.ylabel("Humedad (%)")
             plt.grid(True)
+            plt.tight_layout()
+            plt.gcf().autofmt_xdate()
             hum_buf = io.BytesIO()
             plt.savefig(hum_buf, format="png")
             hum_buf.seek(0)
@@ -432,7 +537,7 @@ def iniciar_dashboard():
         except queue.Empty:
             pass
 
-        ventana_dashboard.after(500, actualizar_dashboard)
+        ventana_dashboard.after(100, actualizar_dashboard)
 
     threading.Thread(target=obtener_datos_graficos, daemon=True).start()
     actualizar_dashboard()
