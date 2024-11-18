@@ -7,7 +7,10 @@ import time
 from machine import Pin
 from Wifi_lib import wifi_init  # Importar Wifi_lib para manejar la conexión Wi-Fi
 
-url = "http://192.168.6.190/registrocaracteristicas.php"  # URL del script PHP
+# URLs de los scripts PHP para registrar humedad y temperatura
+url_humedad = "http://192.168.37.84/CunaInteligente/registroHumedad.php"
+url_temperatura = "http://192.168.37.84/CunaInteligente/registroTemperatura.php"
+
 # Inicializar la conexión Wi-Fi
 station = wifi_init()  # Usar Wifi_lib para conectarse
 
@@ -16,10 +19,8 @@ led_verde = Pin(5, Pin.OUT)
 led_azul = Pin(17, Pin.OUT)
 led_rojo = Pin(18, Pin.OUT)
 
-btn_apagar = Pin(33, Pin.IN, Pin.PULL_UP)  # Pulsador para apagar LEDs (GPIO 33)
-btn_rojo = Pin(32, Pin.IN, Pin.PULL_UP)    # Pulsador para LED rojo (GPIO 32)
-btn_verde = Pin(25, Pin.IN, Pin.PULL_UP)   # Pulsador para LED verde (GPIO 25)
-btn_azul = Pin(26, Pin.IN, Pin.PULL_UP)    # Pulsador para LED azul (GPIO 26)
+btn_humedad = Pin(32, Pin.IN, Pin.PULL_UP)    # Pulsador para registrar humedad (GPIO 32)
+btn_temperatura = Pin(33, Pin.IN, Pin.PULL_UP) # Pulsador para registrar temperatura (GPIO 33)
 
 # Función para apagar todos los LEDs
 def apagar_leds():
@@ -31,7 +32,7 @@ def apagar_leds():
 def serie_taylor_coseno(x, nmax):
     sumatoria = 0
     for n in range(nmax + 1):
-        termino = ((-1)**n * (x**(2 * n))) / math.factorial(2 * n)
+        termino = ((-1) ** n * (x ** (2 * n))) / math.factorial(2 * n)
         sumatoria += termino
     return sumatoria
 
@@ -39,87 +40,93 @@ def serie_taylor_coseno(x, nmax):
 def serie_taylor_seno(x, nmax):
     sumatoria = 0
     for n in range(nmax + 1):
-        termino = ((-1)**n * (x**(2 * n + 1))) / math.factorial(2 * n + 1)
+        termino = ((-1) ** n * (x ** (2 * n + 1))) / math.factorial(2 * n + 1)
         sumatoria += termino
     return sumatoria
 
-# Generación de valores con ruido
-def generar_valores_con_ruido(num_puntos, nmax, funcion):
-    x_vals = []
-    original_vals = []
-    ruido_vals = []
-
-    for i in range(num_puntos):
-        x = i * (2 * math.pi / num_puntos)
-        y_original = funcion(x, nmax)
-        
-        ruido = random.uniform(-0.1, 0.1) * abs(y_original)
-        y_con_ruido = y_original + ruido
-        
-        x_vals.append(x)
-        original_vals.append(y_original)
-        ruido_vals.append(y_con_ruido)
-    
-    return x_vals, original_vals, ruido_vals
-
-# Envío de datos al servidor
-def enviar_datos(peso, altura, id_registro, fecha, bebe_id):
+# Función para enviar datos de temperatura
+def enviar_temperatura(temperatura, fecha, id_cuna):
     data = {
-        "id_registroCaracteristicas": id_registro,
+        "temperatura": temperatura,
         "fecha": fecha,
-        "peso": peso,
-        "altura": altura,
-        "bebe_id_bebe": bebe_id
+        "cuna_id_cuna": id_cuna
     }
     headers = {'Content-Type': 'application/json'}
-    response = requests.post(url, data=ujson.dumps(data), headers=headers)
-    print("Datos enviados:", data)
+    response = requests.post(url_temperatura, data=ujson.dumps(data), headers=headers)
+    print("Datos de temperatura enviados:", data)
     print("Respuesta del servidor:", response.text)
     response.close()
-    time.sleep(1)
+
+# Función para enviar datos de humedad
+def enviar_humedad(humedad, fecha, id_cuna):
+    data = {
+        "humedad": humedad,
+        "fecha": fecha,
+        "cuna_id_cuna": id_cuna
+    }
+    headers = {'Content-Type': 'application/json'}
+    response = requests.post(url_humedad, data=ujson.dumps(data), headers=headers)
+    print("Datos de humedad enviados:", data)
+    print("Respuesta del servidor:", response.text)
+    response.close()
+
+# Función para obtener el ID de la cuna
+def obtener_id_cuna():
+    # Simulación de IDs válidos, puedes reemplazarlo con una consulta al servidor
+    ids_disponibles = [1, 2, 3]  # Lista de IDs de ejemplo
+    while True:
+        try:
+            cuna_id = int(input("Por favor, introduce el ID de la cuna: "))
+            if cuna_id in ids_disponibles:
+                return cuna_id
+            else:
+                print("ID de cuna no disponible. Inténtalo de nuevo.")
+        except ValueError:
+            print("Entrada inválida. Por favor, introduce un número entero.")
 
 # Configuración inicial
-num_puntos = 10  # Número de puntos para calcular en la serie
-nmax = 5  # Número de términos en la serie de Taylor
-bebe_id = 1  # ID de ejemplo para el bebé
-fecha = "2024-11-03"  # Fecha de ejemplo (puedes modificarla para obtener la fecha actual)
+num_puntos = 50  # Número de puntos para calcular en la serie
+nmax = 10  # Número de términos en la serie de Taylor
+valores_x = [i * (2 * math.pi) / num_puntos for i in range(num_puntos)]  # Genera puntos de 0 a 2π
+indice = 0  # Índice inicial para recorrer valores_x
 
-# Generar valores para coseno y seno con ruido
-x_vals, cos_vals, cos_ruido_vals = generar_valores_con_ruido(num_puntos, nmax, serie_taylor_coseno)
-_, sen_vals, sen_ruido_vals = generar_valores_con_ruido(num_puntos, nmax, serie_taylor_seno)
+# Obtener ID de la cuna antes de iniciar el bucle
+cuna_id = obtener_id_cuna()
 
-# Función para enviar las series al servidor
-def enviar_series():
-    for i in range(num_puntos):
-        id_registro = i + 1  # ID de registro único para cada punto
-        peso = cos_ruido_vals[i]  # Usar el valor con ruido de coseno como peso
-        altura = sen_ruido_vals[i]  # Usar el valor con ruido de seno como altura
-        enviar_datos(peso, altura, id_registro, fecha, bebe_id)
+# Obtener la fecha actual en el formato adecuado
+def obtener_fecha_formateada():
+    tiempo = time.localtime()
+    return f"{tiempo[0]:04d}-{tiempo[1]:02d}-{tiempo[2]:02d} {tiempo[3]:02d}:{tiempo[4]:02d}:{tiempo[5]:02d}"
+
+fecha = obtener_fecha_formateada()  # Obtener la fecha actual
+
+# Bucle principal para detectar la pulsación de botones y enviar datos
 
 # Bucle principal para detectar la pulsación de botones y enviar datos
 while True:
-    if btn_apagar.value() == 0:
-        apagar_leds()
-        print("Botón apagar presionado")
-        enviar_series()
-
-    elif btn_rojo.value() == 0:
+    if btn_temperatura.value() == 0:
         apagar_leds()
         led_rojo.value(1)
-        print("Botón rojo presionado")
-        enviar_series()
+        print("Botón de temperatura presionado")
+        
+        # Usar el siguiente valor en valores_x para coseno
+        temperatura = serie_taylor_coseno(valores_x[indice], nmax)
+        enviar_temperatura(temperatura, fecha, cuna_id)
 
-    elif btn_verde.value() == 0:
+        # Avanzar al siguiente índice, reiniciar si alcanza el final del vector
+        indice = (indice + 1) % num_puntos
+
+    elif btn_humedad.value() == 0:
         apagar_leds()
         led_verde.value(1)
-        print("Botón verde presionado")
-        enviar_series()
+        print("Botón de humedad presionado")
+        
+        # Usar el siguiente valor en valores_x para seno
+        humedad = serie_taylor_seno(valores_x[indice], nmax)
+        enviar_humedad(humedad, fecha, cuna_id)
 
-    elif btn_azul.value() == 0:
-        apagar_leds()
-        led_azul.value(1)
-        print("Botón azul presionado")
-        enviar_series()
+        # Avanzar al siguiente índice, reiniciar si alcanza el final del vector
+        indice = (indice + 1) % num_puntos
 
     # Pequeño retardo para evitar múltiples lecturas de una misma pulsación
     time.sleep(0.1)
